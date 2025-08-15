@@ -74,84 +74,129 @@ document.addEventListener('DOMContentLoaded', function() {
         return inside;
     }
     
-    // Fixed climate data fetching function
-    async function fetchClimateData(lat, lng) {
+    // Fetch weather for polygon points (like in CodePen but with HTTPS and correct params)
+    async function fetchClimatePolygon(latlngs) {
         const climateDiv = document.getElementById('previewClimateSidebar');
         climateDiv.innerHTML = '<span class="loading">Loading climate data...</span>';
         
-        try {
-            // Use HTTPS and correct parameter names
-            const apiUrl = `https://api.open-meteo.com/v1/forecast?` +
-                `latitude=${lat}&longitude=${lng}&` +
-                `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&` +
-                `current=temperature_2m,relative_humidity_2m,wind_speed_10m&` +
-                `timezone=auto&forecast_days=7`;
-            
-            console.log('Fetching climate data from:', apiUrl);
-            
-            const response = await fetch(apiUrl);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            console.log('Climate data received:', data);
-            
-            if (!data.daily || !data.current) {
-                throw new Error('No weather data available');
-            }
-            
-            const daily = data.daily;
-            const current = data.current;
-            
-            // Calculate averages for 7-day forecast
-            const avgMaxTemp = calculateAverage(daily.temperature_2m_max);
-            const avgMinTemp = calculateAverage(daily.temperature_2m_min);
-            const totalPrecip = daily.precipitation_sum.reduce((sum, val) => sum + (val || 0), 0);
-            const avgWindSpeed = calculateAverage(daily.wind_speed_10m_max);
-            
-            // Display results
-            climateDiv.textContent = `Current Weather & 7-Day Forecast:
+        let step = 0.05; // Start with ~5km sampling
+        let points = samplePolygonPoints(latlngs, step);
+        
+        // Expand search radius until we get at least one point with data
+        let attempt = 0;
+        while (points.length < 1 && attempt < 5) {
+            step += 0.01; // Expand search area
+            const extraPoints = [];
+            latlngs.forEach(p => {
+                for (let dLat = -step; dLat <= step; dLat += step) {
+                    for (let dLng = -step; dLng <= step; dLng += step) {
+                        extraPoints.push({ lat: p.lat + dLat, lon: p.lng + dLng });
+                    }
+                }
+            });
+            points = points.concat(extraPoints);
+            attempt++;
+        }
+        
+        // Fallback to centroid if still no points
+        if (points.length === 0) {
+            const centroid = {
+                lat: latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length,
+                lon: latlngs.reduce((sum, p) => sum + p.lng, 0) / latlngs.length
+            };
+            points.push(centroid);
+        }
+        
+        // Try to get data from multiple points and average them
+        const tempsMax = [], tempsMin = [], precip = [], wind = [];
+        let successfulRequests = 0;
+        
+        // Limit to first 10 points to avoid too many requests
+        const pointsToTry = points.slice(0, 10);
+        
+        for (let p of pointsToTry) {
+            try {
+                // Use HTTPS and correct parameters
+                const apiUrl = `https://api.open-meteo.com/v1/forecast?` +
+                    `latitude=${p.lat}&longitude=${p.lon}&` +
+                    `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&` +
+                    `current=temperature_2m,relative_humidity_2m,wind_speed_10m&` +
+                    `timezone=auto&forecast_days=7`;
+                
+                console.log(`Trying point ${p.lat}, ${p.lon}`);
+                
+                const res = await fetch(apiUrl);
+                
+                if (!res.ok) {
+                    console.log(`Failed for point ${p.lat}, ${p.lon}: ${res.status}`);
+                    continue;
+                }
+                
+                const data = await res.json();
+                console.log('API Response:', data);
+                
+                if (!data.daily || !data.current) {
+                    console.log(`No data available for point ${p.lat}, ${p.lon}`);
+                    continue;
+                }
+                
+                const daily = data.daily;
+                const current = data.current;
+                
+                // Collect valid data
+                if (daily.temperature_2m_max && daily.temperature_2m_max[0] !== null) {
+                    tempsMax.push(daily.temperature_2m_max[0]);
+                }
+                if (daily.temperature_2m_min && daily.temperature_2m_min[0] !== null) {
+                    tempsMin.push(daily.temperature_2m_min[0]);
+                }
+                if (daily.precipitation_sum && daily.precipitation_sum[0] !== null) {
+                    precip.push(daily.precipitation_sum[0]);
+                }
+                if (daily.wind_speed_10m_max && daily.wind_speed_10m_max[0] !== null) {
+                    wind.push(daily.wind_speed_10m_max[0]);
+                }
+                
+                successfulRequests++;
+                
+                // If we got data from the first point, show it immediately and continue collecting
+                if (successfulRequests === 1) {
+                    climateDiv.textContent = `Climate Data (${successfulRequests} point${successfulRequests > 1 ? 's' : ''}):
 Current Temperature: ${current.temperature_2m || 'N/A'}°C
 Current Humidity: ${current.relative_humidity_2m || 'N/A'}%
-Current Wind Speed: ${current.wind_speed_10m || 'N/A'} km/h
+Current Wind: ${current.wind_speed_10m || 'N/A'} km/h
 
-7-Day Averages:
-Avg Max Temperature: ${avgMaxTemp}°C
-Avg Min Temperature: ${avgMinTemp}°C
-Total Precipitation: ${totalPrecip.toFixed(1)} mm
-Avg Max Wind Speed: ${avgWindSpeed} km/h`;
+Today's Forecast:
+Max Temperature: ${daily.temperature_2m_max[0] || 'N/A'}°C
+Min Temperature: ${daily.temperature_2m_min[0] || 'N/A'}°C
+Precipitation: ${daily.precipitation_sum[0] || 0} mm
+Wind Speed: ${daily.wind_speed_10m_max[0] || 'N/A'} km/h
+
+Collecting more data...`;
+                }
+                
+            } catch(e) { 
+                console.error(`Error for point ${p.lat}, ${p.lon}:`, e);
+                continue;
+            }
+        }
+        
+        // Calculate and display averages if we got multiple data points
+        if (successfulRequests > 0) {
+            const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : 'N/A';
             
-        } catch (error) {
-            console.error('Climate data fetch error:', error);
-            climateDiv.innerHTML = `<span class="error">Climate data unavailable. 
-Error: ${error.message}
-Please try again later.</span>`;
+            climateDiv.textContent = `Climate Analysis (${successfulRequests} data point${successfulRequests > 1 ? 's' : ''}):
+
+${successfulRequests > 1 ? 'Average ' : ''}Max Temperature: ${avg(tempsMax)}°C
+${successfulRequests > 1 ? 'Average ' : ''}Min Temperature: ${avg(tempsMin)}°C
+${successfulRequests > 1 ? 'Average ' : ''}Precipitation: ${avg(precip)} mm
+${successfulRequests > 1 ? 'Average ' : ''}Wind Speed: ${avg(wind)} km/h
+
+Data points sampled: ${successfulRequests}/${pointsToTry.length}`;
+        } else {
+            climateDiv.innerHTML = `<span class="error">No climate data available for this location.
+Try clicking on a different area or check your internet connection.</span>`;
         }
-    }
-    
-    function calculateAverage(values) {
-        if (!values || values.length === 0) return 'N/A';
-        const validValues = values.filter(v => v !== null && v !== undefined);
-        if (validValues.length === 0) return 'N/A';
-        const sum = validValues.reduce((a, b) => a + b, 0);
-        return (sum / validValues.length).toFixed(1);
-    }
-    
-    // Simplified polygon climate fetching
-    async function fetchClimatePolygon(latlngs) {
-        if (latlngs.length === 1) {
-            // Single point
-            await fetchClimateData(latlngs[0].lat, latlngs[0].lng);
-            return;
-        }
-        
-        // Use centroid for polygon climate data
-        const centroidLat = latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length;
-        const centroidLng = latlngs.reduce((sum, p) => sum + p.lng, 0) / latlngs.length;
-        
-        await fetchClimateData(centroidLat, centroidLng);
     }
     
     function setupMarker(latlng) {
@@ -161,7 +206,7 @@ Please try again later.</span>`;
                 const pos = ev.target.getLatLng();
                 updateCoords(pos);
                 reverseGeocode(pos.lat, pos.lng);
-                fetchClimateData(pos.lat, pos.lng);
+                fetchClimatePolygon([{lat: pos.lat, lng: pos.lng}]);
             });
             marker.on('click', removeMarker);
         } else {
@@ -170,7 +215,7 @@ Please try again later.</span>`;
         
         updateCoords(latlng);
         reverseGeocode(latlng.lat, latlng.lng);
-        fetchClimateData(latlng.lat, latlng.lng);
+        fetchClimatePolygon([{lat: latlng.lat, lng: latlng.lng}]);
     }
     
     map.on('click', e => setupMarker(e.latlng));
@@ -207,7 +252,7 @@ Please try again later.</span>`;
         const lat = centroid.geometry.coordinates[1];
         const lng = centroid.geometry.coordinates[0];
         
-        // Fetch climate for polygon
+        // Fetch climate for polygon (averaged)
         const latlngs = layer.getLatLngs()[0];
         setupMarker({ lat, lng });
         fetchClimatePolygon(latlngs);
