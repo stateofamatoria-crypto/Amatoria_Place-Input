@@ -1,0 +1,116 @@
+/* Import IBM Plex Sans */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap');
+
+/* Reset */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #023ad9;
+}
+
+/* Main app container */
+#app {
+  display: flex;
+  height: 100vh; /* Full viewport height */
+}
+
+/* Sidebar */
+#sidebar {
+  width: 300px;
+  background: #f7f7f7;
+  padding: 15px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Sidebar headers */
+#sidebar h2 {
+  margin-top: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #023ad9;
+}
+
+/* Labels */
+#sidebar label {
+  font-size: 0.9em;
+  margin-top: 10px;
+  display: block;
+}
+
+/* Inputs and selects */
+#sidebar input, 
+#sidebar select, 
+#sidebar button {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.9em;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #023ad9;
+}
+
+/* Buttons */
+#sidebar button {
+  background: #023ad9;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+#sidebar button:hover {
+  background: #021f8f;
+}
+
+/* Preview box */
+#preview {
+  margin-top: 20px;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 5px;
+  font-size: 0.9em;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+/* Map container */
+#map {
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+
+/* Leaflet container fix */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Optional: scroll for long sidebar content */
+#sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Instruction text */
+#instruction {
+  font-size: 0.85em;
+  color: #023ad9;
+  margin-bottom: 10px;
+}
