@@ -74,7 +74,95 @@ document.addEventListener('DOMContentLoaded', function() {
         return inside;
     }
     
-    // Climate classification function
+    // Weather code to description mapping
+    function getWeatherDescription(code) {
+        const weatherCodes = {
+            0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Foggy", 48: "Depositing rime fog", 51: "Light drizzle", 53: "Moderate drizzle", 
+            55: "Dense drizzle", 56: "Light freezing drizzle", 57: "Dense freezing drizzle",
+            61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain", 66: "Light freezing rain", 
+            67: "Heavy freezing rain", 71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+            77: "Snow grains", 80: "Slight rain showers", 81: "Moderate rain showers", 
+            82: "Violent rain showers", 85: "Slight snow showers", 86: "Heavy snow showers",
+            95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail"
+        };
+        return weatherCodes[code] || "Unknown";
+    }
+    
+    // Process climate data from different sources
+    function processClimateData(daily, dataType) {
+        const temps = daily.temperature_2m_max.concat(daily.temperature_2m_min).filter(t => t !== null);
+        const maxTemps = daily.temperature_2m_max.filter(t => t !== null);
+        const minTemps = daily.temperature_2m_min.filter(t => t !== null);
+        const precip = daily.precipitation_sum.filter(p => p !== null);
+        const wind = daily.wind_speed_10m_max.filter(w => w !== null);
+        
+        // For different data types, we need different seasonal calculations
+        let winterTemps = [], summerTemps = [], winterPrecip = [], summerPrecip = [];
+        
+        if (dataType === "climate") {
+            // Climate data is already averaged, so we approximate seasons
+            const dataLength = maxTemps.length;
+            const quarterLength = Math.floor(dataLength / 4);
+            
+            winterTemps = maxTemps.slice(0, quarterLength).concat(maxTemps.slice(dataLength - quarterLength));
+            summerTemps = maxTemps.slice(quarterLength * 2, quarterLength * 3);
+            winterPrecip = precip.slice(0, quarterLength).concat(precip.slice(dataLength - quarterLength));
+            summerPrecip = precip.slice(quarterLength * 2, quarterLength * 3);
+        } else if (dataType === "historical") {
+            // Process actual dates for historical data
+            daily.temperature_2m_max.forEach((temp, index) => {
+                if (temp === null) return;
+                const dayOfYear = index % 365; // Approximate day of year
+                
+                // Winter: Dec, Jan, Feb (approx days 335-365, 0-59)
+                // Summer: Jun, Jul, Aug (approx days 152-243)
+                if (dayOfYear > 335 || dayOfYear < 59) {
+                    winterTemps.push(temp);
+                    if (daily.precipitation_sum[index] !== null) {
+                        winterPrecip.push(daily.precipitation_sum[index]);
+                    }
+                } else if (dayOfYear >= 152 && dayOfYear <= 243) {
+                    summerTemps.push(temp);
+                    if (daily.precipitation_sum[index] !== null) {
+                        summerPrecip.push(daily.precipitation_sum[index]);
+                    }
+                }
+            });
+        } else {
+            // For forecast data, just use the available data
+            winterTemps = maxTemps.slice(0, Math.floor(maxTemps.length / 2));
+            summerTemps = maxTemps.slice(Math.floor(maxTemps.length / 2));
+            winterPrecip = precip.slice(0, Math.floor(precip.length / 2));
+            summerPrecip = precip.slice(Math.floor(precip.length / 2));
+        }
+        
+        // Scale factors for different data types
+        let scaleFactor = 1;
+        if (dataType === "forecast") {
+            scaleFactor = 365 / maxTemps.length; // Scale 14-day data to yearly estimates
+        } else if (dataType === "historical" && maxTemps.length < 365) {
+            scaleFactor = 365 / maxTemps.length; // Scale partial year data
+        }
+        
+        return {
+            avgTemp: temps.length ? (temps.reduce((a,b) => a+b) / temps.length).toFixed(1) : 'N/A',
+            maxTemp: maxTemps.length ? Math.max(...maxTemps).toFixed(1) : 'N/A',
+            minTemp: minTemps.length ? Math.min(...minTemps).toFixed(1) : 'N/A',
+            avgMaxTemp: maxTemps.length ? (maxTemps.reduce((a,b) => a+b) / maxTemps.length).toFixed(1) : 'N/A',
+            avgMinTemp: minTemps.length ? (minTemps.reduce((a,b) => a+b) / minTemps.length).toFixed(1) : 'N/A',
+            totalPrecip: precip.length ? (precip.reduce((a,b) => a+b) * scaleFactor).toFixed(0) : 'N/A',
+            avgWindSpeed: wind.length ? (wind.reduce((a,b) => a+b) / wind.length).toFixed(1) : 'N/A',
+            maxWindSpeed: wind.length ? Math.max(...wind).toFixed(1) : 'N/A',
+            frostDays: Math.round(minTemps.filter(t => t < 0).length * scaleFactor),
+            hotDays: Math.round(maxTemps.filter(t => t > 30).length * scaleFactor),
+            rainyDays: Math.round(precip.filter(p => p > 1).length * scaleFactor),
+            winterTemp: winterTemps.length ? (winterTemps.reduce((a,b) => a+b) / winterTemps.length).toFixed(1) : 'N/A',
+            summerTemp: summerTemps.length ? (summerTemps.reduce((a,b) => a+b) / summerTemps.length).toFixed(1) : 'N/A',
+            winterPrecip: winterPrecip.length ? (winterPrecip.reduce((a,b) => a+b) * (scaleFactor/4)).toFixed(0) : 'N/A',
+            summerPrecip: summerPrecip.length ? (summerPrecip.reduce((a,b) => a+b) * (scaleFactor/4)).toFixed(0) : 'N/A'
+        };
+    }
     function classifyClimate(avgTemp, winterTemp, summerTemp, annualPrecip, summerPrecip) {
         // Simplified Köppen-Geiger classification
         if (avgTemp < 0) return "Polar climate";
@@ -121,109 +209,96 @@ document.addEventListener('DOMContentLoaded', function() {
         climateDiv.innerHTML = '<span class="loading">Loading comprehensive climate data...</span>';
         
         try {
-            // Get historical data for better yearly averages (2023 data)
-            const historicalUrl = `https://archive-api.open-meteo.com/v1/archive?` +
-                `latitude=${lat}&longitude=${lng}&` +
-                `start_date=2023-01-01&end_date=2023-12-31&` +
-                `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,` +
-                `relative_humidity_2m,shortwave_radiation_sum&timezone=auto`;
+            // Try multiple approaches to get comprehensive data
             
-            // Also get current weather for immediate context
+            // 1. Try climate data (30-year averages) - this is usually more reliable
+            const climateUrl = `https://climate-api.open-meteo.com/v1/climate?` +
+                `latitude=${lat}&longitude=${lng}&` +
+                `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&` +
+                `start_date=1991-01-01&end_date=2020-12-31`;
+            
+            // 2. Get current weather for immediate context
             const currentUrl = `https://api.open-meteo.com/v1/forecast?` +
                 `latitude=${lat}&longitude=${lng}&` +
-                `current=temperature_2m,relative_humidity_2m,wind_speed_10m&` +
+                `current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&` +
                 `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,` +
-                `shortwave_radiation_sum&forecast_days=7&timezone=auto`;
+                `sunshine_duration&forecast_days=14&timezone=auto`;
             
-            console.log('Fetching historical data:', historicalUrl);
+            // 3. Try to get some historical data from recent years
+            const recentHistoricalUrl = `https://archive-api.open-meteo.com/v1/archive?` +
+                `latitude=${lat}&longitude=${lng}&` +
+                `start_date=2022-01-01&end_date=2023-12-31&` +
+                `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=auto`;
+            
+            console.log('Trying climate data API:', climateUrl);
             console.log('Fetching current data:', currentUrl);
+            console.log('Trying recent historical:', recentHistoricalUrl);
             
-            const [historicalRes, currentRes] = await Promise.all([
-                fetch(historicalUrl),
-                fetch(currentUrl)
+            const [climateRes, currentRes, recentRes] = await Promise.all([
+                fetch(climateUrl).catch(() => ({ ok: false })),
+                fetch(currentUrl).catch(() => ({ ok: false })),
+                fetch(recentHistoricalUrl).catch(() => ({ ok: false }))
             ]);
             
-            let historicalData = null;
+            let climateData = null;
             let currentData = null;
+            let recentData = null;
             
-            if (historicalRes.ok) {
-                historicalData = await historicalRes.json();
+            if (climateRes.ok) {
+                try {
+                    climateData = await climateRes.json();
+                    console.log('Climate data received:', climateData);
+                } catch (e) {
+                    console.log('Climate data parsing failed:', e);
+                }
             }
             
             if (currentRes.ok) {
-                currentData = await currentRes.json();
+                try {
+                    currentData = await currentRes.json();
+                    console.log('Current data received:', currentData);
+                } catch (e) {
+                    console.log('Current data parsing failed:', e);
+                }
             }
             
-            if (!historicalData && !currentData) {
-                throw new Error('No climate data available');
+            if (recentRes.ok) {
+                try {
+                    recentData = await recentRes.json();
+                    console.log('Recent historical data received:', recentData);
+                } catch (e) {
+                    console.log('Recent historical parsing failed:', e);
+                }
             }
             
-            // Process historical data for yearly statistics
+            
+            if (!climateData && !currentData && !recentData) {
+                throw new Error('No climate data available from any source');
+            }
+            
+            // Process the best available data
             let yearlyStats = null;
-            if (historicalData?.daily) {
-                const daily = historicalData.daily;
-                const temps = daily.temperature_2m_max.concat(daily.temperature_2m_min).filter(t => t !== null);
-                const maxTemps = daily.temperature_2m_max.filter(t => t !== null);
-                const minTemps = daily.temperature_2m_min.filter(t => t !== null);
-                const precip = daily.precipitation_sum.filter(p => p !== null);
-                const wind = daily.wind_speed_10m_max.filter(w => w !== null);
-                const humidity = daily.relative_humidity_2m ? daily.relative_humidity_2m.filter(h => h !== null) : [];
-                const solar = daily.shortwave_radiation_sum.filter(s => s !== null);
-                
-                // Calculate seasonal averages
-                const winterMonths = [11, 0, 1]; // Dec, Jan, Feb
-                const summerMonths = [5, 6, 7]; // Jun, Jul, Aug
-                
-                const winterTemps = [];
-                const summerTemps = [];
-                const winterPrecip = [];
-                const summerPrecip = [];
-                
-                daily.temperature_2m_max.forEach((temp, index) => {
-                    if (temp === null) return;
-                    const date = new Date('2023-01-01');
-                    date.setDate(date.getDate() + index);
-                    const month = date.getMonth();
-                    
-                    if (winterMonths.includes(month)) {
-                        winterTemps.push(temp);
-                        if (daily.precipitation_sum[index] !== null) {
-                            winterPrecip.push(daily.precipitation_sum[index]);
-                        }
-                    } else if (summerMonths.includes(month)) {
-                        summerTemps.push(temp);
-                        if (daily.precipitation_sum[index] !== null) {
-                            summerPrecip.push(daily.precipitation_sum[index]);
-                        }
-                    }
-                });
-                
-                yearlyStats = {
-                    avgTemp: temps.length ? (temps.reduce((a,b) => a+b) / temps.length).toFixed(1) : 'N/A',
-                    maxTemp: maxTemps.length ? Math.max(...maxTemps).toFixed(1) : 'N/A',
-                    minTemp: minTemps.length ? Math.min(...minTemps).toFixed(1) : 'N/A',
-                    avgMaxTemp: maxTemps.length ? (maxTemps.reduce((a,b) => a+b) / maxTemps.length).toFixed(1) : 'N/A',
-                    avgMinTemp: minTemps.length ? (minTemps.reduce((a,b) => a+b) / minTemps.length).toFixed(1) : 'N/A',
-                    totalPrecip: precip.length ? precip.reduce((a,b) => a+b).toFixed(0) : 'N/A',
-                    avgWindSpeed: wind.length ? (wind.reduce((a,b) => a+b) / wind.length).toFixed(1) : 'N/A',
-                    maxWindSpeed: wind.length ? Math.max(...wind).toFixed(1) : 'N/A',
-                    avgHumidity: humidity.length ? (humidity.reduce((a,b) => a+b) / humidity.length).toFixed(0) : 'N/A',
-                    avgSolar: solar.length ? (solar.reduce((a,b) => a+b) / solar.length).toFixed(1) : 'N/A',
-                    frostDays: minTemps.filter(t => t < 0).length,
-                    hotDays: maxTemps.filter(t => t > 30).length,
-                    rainyDays: precip.filter(p => p > 1).length,
-                    winterTemp: winterTemps.length ? (winterTemps.reduce((a,b) => a+b) / winterTemps.length).toFixed(1) : 'N/A',
-                    summerTemp: summerTemps.length ? (summerTemps.reduce((a,b) => a+b) / summerTemps.length).toFixed(1) : 'N/A',
-                    winterPrecip: winterPrecip.length ? winterPrecip.reduce((a,b) => a+b).toFixed(0) : 'N/A',
-                    summerPrecip: summerPrecip.length ? summerPrecip.reduce((a,b) => a+b).toFixed(0) : 'N/A'
-                };
+            let dataSource = "";
+            
+            // Prefer climate data (30-year averages), then recent historical, then current
+            if (climateData?.daily) {
+                dataSource = "30-year climate averages (1991-2020)";
+                yearlyStats = processClimateData(climateData.daily, "climate");
+            } else if (recentData?.daily) {
+                dataSource = "recent historical data (2022-2023)";
+                yearlyStats = processClimateData(recentData.daily, "historical");
+            } else if (currentData?.daily) {
+                dataSource = "14-day forecast extended analysis";
+                yearlyStats = processClimateData(currentData.daily, "forecast");
             }
             
             // Get current weather context
             let currentWeather = "";
             if (currentData?.current) {
                 const current = currentData.current;
+                const weatherDesc = getWeatherDescription(current.weather_code);
                 currentWeather = `CURRENT CONDITIONS:
+Weather: ${weatherDesc}
 Temperature: ${current.temperature_2m || 'N/A'}°C
 Humidity: ${current.relative_humidity_2m || 'N/A'}%
 Wind Speed: ${current.wind_speed_10m || 'N/A'} km/h
@@ -253,7 +328,9 @@ Wind Speed: ${current.wind_speed_10m || 'N/A'} km/h
 ${climateClass}
 ${seasonalDesc}
 
-YEARLY AVERAGES (2023):
+DATA SOURCE: ${dataSource}
+
+TEMPERATURE ANALYSIS:
 Average Temperature: ${yearlyStats.avgTemp}°C
 Average Maximum: ${yearlyStats.avgMaxTemp}°C
 Average Minimum: ${yearlyStats.avgMinTemp}°C
@@ -263,43 +340,36 @@ Summer Average: ${yearlyStats.summerTemp}°C
 EXTREMES:
 Absolute Maximum: ${yearlyStats.maxTemp}°C
 Absolute Minimum: ${yearlyStats.minTemp}°C
-Hot Days (>30°C): ${yearlyStats.hotDays} days
-Frost Days (<0°C): ${yearlyStats.frostDays} days
+Temperature Range: ${(parseFloat(yearlyStats.maxTemp) - parseFloat(yearlyStats.minTemp)).toFixed(1)}°C
+Hot Days (>30°C): ${yearlyStats.hotDays} days/year
+Frost Days (<0°C): ${yearlyStats.frostDays} days/year
 
 PRECIPITATION:
 Annual Total: ${yearlyStats.totalPrecip} mm
 Winter Total: ${yearlyStats.winterPrecip} mm
 Summer Total: ${yearlyStats.summerPrecip} mm
-Rainy Days (>1mm): ${yearlyStats.rainyDays} days
+Dry Season: ${yearlyStats.winterPrecip < yearlyStats.summerPrecip ? 'Winter' : 'Summer'}
+Rainy Days (>1mm): ${yearlyStats.rainyDays} days/year
 
-WIND & HUMIDITY:
+WIND CONDITIONS:
 Average Wind: ${yearlyStats.avgWindSpeed} km/h
 Maximum Wind: ${yearlyStats.maxWindSpeed} km/h
-Average Humidity: ${yearlyStats.avgHumidity}%
+Wind Exposure: ${parseFloat(yearlyStats.avgWindSpeed) > 15 ? 'High' : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 'Moderate' : 'Low'}
 
-SOLAR CONDITIONS:
-Avg Solar Radiation: ${yearlyStats.avgSolar} MJ/m²/day
+AGRICULTURAL SUITABILITY:
+Growing Season: ${yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short'} (${Math.max(0, 365-yearlyStats.frostDays)} frost-free days)
+Irrigation Needs: ${parseFloat(yearlyStats.totalPrecip) < 400 ? 'High' : parseFloat(yearlyStats.totalPrecip) < 800 ? 'Moderate' : 'Low'}
+Heat Stress Risk: ${yearlyStats.hotDays > 30 ? 'High' : yearlyStats.hotDays > 10 ? 'Moderate' : 'Low'}
 
-PLANNING CONSIDERATIONS:
-• Growing Season: ${yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short'} (${365-yearlyStats.frostDays} frost-free days)
-• Water Requirements: ${parseFloat(yearlyStats.totalPrecip) < 600 ? 'High irrigation needed' : parseFloat(yearlyStats.totalPrecip) < 1000 ? 'Moderate irrigation' : 'Natural precipitation adequate'}
-• Heat Stress Risk: ${yearlyStats.hotDays > 20 ? 'High' : yearlyStats.hotDays > 5 ? 'Moderate' : 'Low'}
-• Wind Exposure: ${parseFloat(yearlyStats.avgWindSpeed) > 15 ? 'High' : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 'Moderate' : 'Low'}`;
-            } else if (currentData?.daily) {
-                // Fallback to 7-day forecast if no historical data
-                const daily = currentData.daily;
-                const maxTemps = daily.temperature_2m_max.filter(t => t !== null);
-                const minTemps = daily.temperature_2m_min.filter(t => t !== null);
-                const precip = daily.precipitation_sum.filter(p => p !== null);
-                const wind = daily.wind_speed_10m_max.filter(w => w !== null);
-                
-                climateReport += `7-DAY FORECAST ANALYSIS:
-Avg Maximum: ${maxTemps.length ? (maxTemps.reduce((a,b) => a+b)/maxTemps.length).toFixed(1) : 'N/A'}°C
-Avg Minimum: ${minTemps.length ? (minTemps.reduce((a,b) => a+b)/minTemps.length).toFixed(1) : 'N/A'}°C
-Total Precipitation: ${precip.reduce((a,b) => a+b).toFixed(1)} mm
-Avg Wind Speed: ${wind.length ? (wind.reduce((a,b) => a+b)/wind.length).toFixed(1) : 'N/A'} km/h
-
-Note: Limited to forecast data. Historical data unavailable.`;
+URBAN PLANNING NOTES:
+• Cooling Demand: ${yearlyStats.hotDays > 20 ? 'High AC requirements' : 'Moderate cooling needs'}
+• Heating Demand: ${yearlyStats.frostDays > 100 ? 'Significant heating required' : 'Moderate heating needs'}
+• Drainage Planning: ${parseFloat(yearlyStats.totalPrecip) > 1000 ? 'Important for high rainfall' : 'Standard drainage sufficient'}
+• Green Infrastructure: ${parseFloat(yearlyStats.totalPrecip) < 600 ? 'Drought-resistant plants' : 'Various plant options suitable'}`;
+            } else {
+                climateReport += `LIMITED FORECAST DATA AVAILABLE
+Unable to access comprehensive climate databases.
+Showing available forecast information only.`;
             }
             
             climateDiv.textContent = climateReport;
