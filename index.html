@@ -1,78 +1,77 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Place Input_adv</title>
-  <link rel='stylesheet' href='https://unpkg.com/leaflet/dist/leaflet.css'>
-<link rel='stylesheet' href='https://unpkg.com/leaflet-draw/dist/leaflet.draw.css'><link rel="stylesheet" href="./style.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plot Mapping Tool</title>
+    
+    <!-- External CSS libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css">
+    
+    <!-- Your custom CSS -->
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-<!-- partial:index.partial.html -->
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-
-<div id="app">
-  <div id="sidebar">
-    <h2>Plot Details</h2>
-
-    <label for="plotName">Plot Name</label>
-    <input type="text" id="plotName" placeholder="Enter plot name">
-
-    <label for="plotLocation">Location</label>
-    <input type="text" id="plotLocation" placeholder="Click on map to set location">
-
-    <label for="plotArea">Area (m²)</label>
-    <input type="number" id="plotArea" placeholder="Draw polygon or enter manually">
-
-    <label for="plotType">Type</label>
-    <select id="plotType">
-      <option value="">Select type...</option>
-      <option>Residential plot</option>
-      <option>Community garden</option>
-      <option>Rooftop garden / rooftop farm</option>
-      <option>Small farm (under 2 hectares)</option>
-      <option>Medium farm (2–20 hectares)</option>
-      <option>Mixed-use plot (residential + commercial)</option>
-      <option>Cultural site (museum, heritage building, art space)</option>
-      <option>Urban green space (parklet, plaza, micro-park)</option>
-      <option>Forest plot / rewilding area</option>
-      <option>Wetland / water feature plot</option>
-      <option>Agricultural experimental site</option>
-      <option>Educational site (school garden, training farm)</option>
-      <option>Commercial agriculture (greenhouse, hydroponics)</option>
-      <option>Industrial plot (with green retrofit)</option>
-      <option>Brownfield (for regeneration planning)</option>
-    </select>
-
-    <button id="savePlot">Save Plot</button>
-
-    <div id="preview">
-      <h3>Plot Factsheet</h3>
-      <p><strong>Name:</strong> <span id="previewName">—</span></p>
-      <p><strong>Location:</strong> <span id="previewLocation">—</span></p>
-      <p><strong>Area:</strong> <span id="previewArea">—</span></p>
-      <p><strong>Perimeter:</strong> <span id="previewPerimeter">—</span> m</p>
-      <p><strong>Type:</strong> <span id="previewType">—</span></p>
-      <p><strong>Coordinates:</strong> <span id="previewCoords">—</span></p>
-      <button id="removePin">Remove Pin</button>
-
-      <h3>Climate Data</h3>
-      <pre id="previewClimateSidebar">—</pre>
-      <button id="getWeatherBtn">Get Climate Data</button>
-      <pre id="weatherInfo"></pre>
+    <div id="app">
+        <div id="sidebar">
+            <h2>Plot Details</h2>
+            
+            <label for="plotName">Plot Name</label>
+            <input type="text" id="plotName" placeholder="Enter plot name">
+            
+            <label for="plotLocation">Location</label>
+            <input type="text" id="plotLocation" placeholder="Click on map to set location">
+            
+            <label for="plotArea">Area (m²)</label>
+            <input type="number" id="plotArea" placeholder="Draw polygon or enter manually">
+            
+            <label for="plotType">Type</label>
+            <select id="plotType">
+                <option value="">Select type...</option>
+                <option>Residential plot</option>
+                <option>Community garden</option>
+                <option>Rooftop garden / rooftop farm</option>
+                <option>Small farm (under 2 hectares)</option>
+                <option>Medium farm (2–20 hectares)</option>
+                <option>Mixed-use plot (residential + commercial)</option>
+                <option>Cultural site (museum, heritage building, art space)</option>
+                <option>Urban green space (parklet, plaza, micro-park)</option>
+                <option>Forest plot / rewilding area</option>
+                <option>Wetland / water feature plot</option>
+                <option>Agricultural experimental site</option>
+                <option>Educational site (school garden, training farm)</option>
+                <option>Commercial agriculture (greenhouse, hydroponics)</option>
+                <option>Industrial plot (with green retrofit)</option>
+                <option>Brownfield (for regeneration planning)</option>
+            </select>
+            
+            <button id="savePlot">Save Plot</button>
+            
+            <div id="preview">
+                <h3>Plot Factsheet</h3>
+                <p><strong>Name:</strong> <span id="previewName">—</span></p>
+                <p><strong>Location:</strong> <span id="previewLocation">—</span></p>
+                <p><strong>Area:</strong> <span id="previewArea">—</span></p>
+                <p><strong>Perimeter:</strong> <span id="previewPerimeter">—</span> m</p>
+                <p><strong>Type:</strong> <span id="previewType">—</span></p>
+                <p><strong>Coordinates:</strong> <span id="previewCoords">—</span></p>
+                <button id="removePin">Remove Pin</button>
+                
+                <h3>Climate Data</h3>
+                <pre id="previewClimateSidebar">—</pre>
+            </div>
+        </div>
+        
+        <div id="map" style="flex:1;height:100vh;"></div>
     </div>
-  </div>
-
-  <div id="map" style="flex:1;height:100vh;"></div>
-</div>
-<!-- partial -->
-  <script src='https://unpkg.com/leaflet/dist/leaflet.js'></script>
-<script src='https://unpkg.com/leaflet-draw/dist/leaflet.draw.js'></script>
-<script src='https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'></script><script  src="./script.js"></script>
-
+    
+    <!-- External JavaScript libraries (load in correct order) -->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    
+    <!-- Your custom JavaScript (must be last) -->
+    <script src="./script.js"></script>
 </body>
 </html>
