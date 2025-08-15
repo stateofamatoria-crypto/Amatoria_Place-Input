@@ -74,129 +74,283 @@ document.addEventListener('DOMContentLoaded', function() {
         return inside;
     }
     
-    // Fetch weather for polygon points (like in CodePen but with HTTPS and correct params)
-    async function fetchClimatePolygon(latlngs) {
+    // Climate classification function
+    function classifyClimate(avgTemp, winterTemp, summerTemp, annualPrecip, summerPrecip) {
+        // Simplified Köppen-Geiger classification
+        if (avgTemp < 0) return "Polar climate";
+        if (avgTemp < 10) return "Continental climate";
+        if (winterTemp < 0 && summerTemp > 22) return "Continental climate with warm summers";
+        if (winterTemp < 0 && summerTemp < 22) return "Continental climate with cool summers";
+        if (winterTemp > 0 && summerTemp > 22 && annualPrecip > 1000) return "Humid subtropical climate";
+        if (winterTemp > 0 && summerTemp > 22 && annualPrecip < 600) return "Mediterranean climate";
+        if (winterTemp > 5 && summerTemp > 22) return "Mediterranean climate";
+        if (winterTemp > 0 && summerTemp < 22) return "Temperate oceanic climate";
+        if (avgTemp > 18 && annualPrecip > 1500) return "Tropical climate";
+        if (avgTemp > 18 && annualPrecip < 600) return "Arid climate";
+        return "Temperate climate";
+    }
+    
+    // Get seasonal description
+    function getSeasonalDescription(winterTemp, summerTemp, annualPrecip) {
+        let desc = "";
+        
+        // Temperature characteristics
+        if (winterTemp < -5) desc += "Cold winters";
+        else if (winterTemp < 5) desc += "Cool winters";
+        else if (winterTemp < 15) desc += "Mild winters";
+        else desc += "Warm winters";
+        
+        if (summerTemp < 20) desc += ", cool summers";
+        else if (summerTemp < 25) desc += ", mild summers";
+        else if (summerTemp < 30) desc += ", warm summers";
+        else desc += ", hot summers";
+        
+        // Precipitation characteristics
+        if (annualPrecip < 400) desc += ". Arid conditions";
+        else if (annualPrecip < 800) desc += ". Semi-arid conditions";
+        else if (annualPrecip < 1200) desc += ". Moderate rainfall";
+        else if (annualPrecip < 2000) desc += ". High rainfall";
+        else desc += ". Very high rainfall";
+        
+        return desc;
+    }
+    
+    // Comprehensive climate data fetching
+    async function fetchComprehensiveClimate(lat, lng) {
         const climateDiv = document.getElementById('previewClimateSidebar');
-        climateDiv.innerHTML = '<span class="loading">Loading climate data...</span>';
+        climateDiv.innerHTML = '<span class="loading">Loading comprehensive climate data...</span>';
         
-        let step = 0.05; // Start with ~5km sampling
-        let points = samplePolygonPoints(latlngs, step);
-        
-        // Expand search radius until we get at least one point with data
-        let attempt = 0;
-        while (points.length < 1 && attempt < 5) {
-            step += 0.01; // Expand search area
-            const extraPoints = [];
-            latlngs.forEach(p => {
-                for (let dLat = -step; dLat <= step; dLat += step) {
-                    for (let dLng = -step; dLng <= step; dLng += step) {
-                        extraPoints.push({ lat: p.lat + dLat, lon: p.lng + dLng });
+        try {
+            // Get historical data for better yearly averages (2023 data)
+            const historicalUrl = `https://archive-api.open-meteo.com/v1/archive?` +
+                `latitude=${lat}&longitude=${lng}&` +
+                `start_date=2023-01-01&end_date=2023-12-31&` +
+                `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,` +
+                `relative_humidity_2m,shortwave_radiation_sum&timezone=auto`;
+            
+            // Also get current weather for immediate context
+            const currentUrl = `https://api.open-meteo.com/v1/forecast?` +
+                `latitude=${lat}&longitude=${lng}&` +
+                `current=temperature_2m,relative_humidity_2m,wind_speed_10m&` +
+                `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,` +
+                `shortwave_radiation_sum&forecast_days=7&timezone=auto`;
+            
+            console.log('Fetching historical data:', historicalUrl);
+            console.log('Fetching current data:', currentUrl);
+            
+            const [historicalRes, currentRes] = await Promise.all([
+                fetch(historicalUrl),
+                fetch(currentUrl)
+            ]);
+            
+            let historicalData = null;
+            let currentData = null;
+            
+            if (historicalRes.ok) {
+                historicalData = await historicalRes.json();
+            }
+            
+            if (currentRes.ok) {
+                currentData = await currentRes.json();
+            }
+            
+            if (!historicalData && !currentData) {
+                throw new Error('No climate data available');
+            }
+            
+            // Process historical data for yearly statistics
+            let yearlyStats = null;
+            if (historicalData?.daily) {
+                const daily = historicalData.daily;
+                const temps = daily.temperature_2m_max.concat(daily.temperature_2m_min).filter(t => t !== null);
+                const maxTemps = daily.temperature_2m_max.filter(t => t !== null);
+                const minTemps = daily.temperature_2m_min.filter(t => t !== null);
+                const precip = daily.precipitation_sum.filter(p => p !== null);
+                const wind = daily.wind_speed_10m_max.filter(w => w !== null);
+                const humidity = daily.relative_humidity_2m ? daily.relative_humidity_2m.filter(h => h !== null) : [];
+                const solar = daily.shortwave_radiation_sum.filter(s => s !== null);
+                
+                // Calculate seasonal averages
+                const winterMonths = [11, 0, 1]; // Dec, Jan, Feb
+                const summerMonths = [5, 6, 7]; // Jun, Jul, Aug
+                
+                const winterTemps = [];
+                const summerTemps = [];
+                const winterPrecip = [];
+                const summerPrecip = [];
+                
+                daily.temperature_2m_max.forEach((temp, index) => {
+                    if (temp === null) return;
+                    const date = new Date('2023-01-01');
+                    date.setDate(date.getDate() + index);
+                    const month = date.getMonth();
+                    
+                    if (winterMonths.includes(month)) {
+                        winterTemps.push(temp);
+                        if (daily.precipitation_sum[index] !== null) {
+                            winterPrecip.push(daily.precipitation_sum[index]);
+                        }
+                    } else if (summerMonths.includes(month)) {
+                        summerTemps.push(temp);
+                        if (daily.precipitation_sum[index] !== null) {
+                            summerPrecip.push(daily.precipitation_sum[index]);
+                        }
                     }
-                }
-            });
-            points = points.concat(extraPoints);
-            attempt++;
-        }
-        
-        // Fallback to centroid if still no points
-        if (points.length === 0) {
-            const centroid = {
-                lat: latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length,
-                lon: latlngs.reduce((sum, p) => sum + p.lng, 0) / latlngs.length
-            };
-            points.push(centroid);
-        }
-        
-        // Try to get data from multiple points and average them
-        const tempsMax = [], tempsMin = [], precip = [], wind = [];
-        let successfulRequests = 0;
-        
-        // Limit to first 10 points to avoid too many requests
-        const pointsToTry = points.slice(0, 10);
-        
-        for (let p of pointsToTry) {
+                });
+                
+                yearlyStats = {
+                    avgTemp: temps.length ? (temps.reduce((a,b) => a+b) / temps.length).toFixed(1) : 'N/A',
+                    maxTemp: maxTemps.length ? Math.max(...maxTemps).toFixed(1) : 'N/A',
+                    minTemp: minTemps.length ? Math.min(...minTemps).toFixed(1) : 'N/A',
+                    avgMaxTemp: maxTemps.length ? (maxTemps.reduce((a,b) => a+b) / maxTemps.length).toFixed(1) : 'N/A',
+                    avgMinTemp: minTemps.length ? (minTemps.reduce((a,b) => a+b) / minTemps.length).toFixed(1) : 'N/A',
+                    totalPrecip: precip.length ? precip.reduce((a,b) => a+b).toFixed(0) : 'N/A',
+                    avgWindSpeed: wind.length ? (wind.reduce((a,b) => a+b) / wind.length).toFixed(1) : 'N/A',
+                    maxWindSpeed: wind.length ? Math.max(...wind).toFixed(1) : 'N/A',
+                    avgHumidity: humidity.length ? (humidity.reduce((a,b) => a+b) / humidity.length).toFixed(0) : 'N/A',
+                    avgSolar: solar.length ? (solar.reduce((a,b) => a+b) / solar.length).toFixed(1) : 'N/A',
+                    frostDays: minTemps.filter(t => t < 0).length,
+                    hotDays: maxTemps.filter(t => t > 30).length,
+                    rainyDays: precip.filter(p => p > 1).length,
+                    winterTemp: winterTemps.length ? (winterTemps.reduce((a,b) => a+b) / winterTemps.length).toFixed(1) : 'N/A',
+                    summerTemp: summerTemps.length ? (summerTemps.reduce((a,b) => a+b) / summerTemps.length).toFixed(1) : 'N/A',
+                    winterPrecip: winterPrecip.length ? winterPrecip.reduce((a,b) => a+b).toFixed(0) : 'N/A',
+                    summerPrecip: summerPrecip.length ? summerPrecip.reduce((a,b) => a+b).toFixed(0) : 'N/A'
+                };
+            }
+            
+            // Get current weather context
+            let currentWeather = "";
+            if (currentData?.current) {
+                const current = currentData.current;
+                currentWeather = `CURRENT CONDITIONS:
+Temperature: ${current.temperature_2m || 'N/A'}°C
+Humidity: ${current.relative_humidity_2m || 'N/A'}%
+Wind Speed: ${current.wind_speed_10m || 'N/A'} km/h
+
+`;
+            }
+            
+            // Build comprehensive climate report
+            let climateReport = currentWeather;
+            
+            if (yearlyStats) {
+                const climateClass = classifyClimate(
+                    parseFloat(yearlyStats.avgTemp),
+                    parseFloat(yearlyStats.winterTemp),
+                    parseFloat(yearlyStats.summerTemp),
+                    parseFloat(yearlyStats.totalPrecip),
+                    parseFloat(yearlyStats.summerPrecip)
+                );
+                
+                const seasonalDesc = getSeasonalDescription(
+                    parseFloat(yearlyStats.winterTemp),
+                    parseFloat(yearlyStats.summerTemp),
+                    parseFloat(yearlyStats.totalPrecip)
+                );
+                
+                climateReport += `CLIMATE CLASSIFICATION:
+${climateClass}
+${seasonalDesc}
+
+YEARLY AVERAGES (2023):
+Average Temperature: ${yearlyStats.avgTemp}°C
+Average Maximum: ${yearlyStats.avgMaxTemp}°C
+Average Minimum: ${yearlyStats.avgMinTemp}°C
+Winter Average: ${yearlyStats.winterTemp}°C
+Summer Average: ${yearlyStats.summerTemp}°C
+
+EXTREMES:
+Absolute Maximum: ${yearlyStats.maxTemp}°C
+Absolute Minimum: ${yearlyStats.minTemp}°C
+Hot Days (>30°C): ${yearlyStats.hotDays} days
+Frost Days (<0°C): ${yearlyStats.frostDays} days
+
+PRECIPITATION:
+Annual Total: ${yearlyStats.totalPrecip} mm
+Winter Total: ${yearlyStats.winterPrecip} mm
+Summer Total: ${yearlyStats.summerPrecip} mm
+Rainy Days (>1mm): ${yearlyStats.rainyDays} days
+
+WIND & HUMIDITY:
+Average Wind: ${yearlyStats.avgWindSpeed} km/h
+Maximum Wind: ${yearlyStats.maxWindSpeed} km/h
+Average Humidity: ${yearlyStats.avgHumidity}%
+
+SOLAR CONDITIONS:
+Avg Solar Radiation: ${yearlyStats.avgSolar} MJ/m²/day
+
+PLANNING CONSIDERATIONS:
+• Growing Season: ${yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short'} (${365-yearlyStats.frostDays} frost-free days)
+• Water Requirements: ${parseFloat(yearlyStats.totalPrecip) < 600 ? 'High irrigation needed' : parseFloat(yearlyStats.totalPrecip) < 1000 ? 'Moderate irrigation' : 'Natural precipitation adequate'}
+• Heat Stress Risk: ${yearlyStats.hotDays > 20 ? 'High' : yearlyStats.hotDays > 5 ? 'Moderate' : 'Low'}
+• Wind Exposure: ${parseFloat(yearlyStats.avgWindSpeed) > 15 ? 'High' : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 'Moderate' : 'Low'}`;
+            } else if (currentData?.daily) {
+                // Fallback to 7-day forecast if no historical data
+                const daily = currentData.daily;
+                const maxTemps = daily.temperature_2m_max.filter(t => t !== null);
+                const minTemps = daily.temperature_2m_min.filter(t => t !== null);
+                const precip = daily.precipitation_sum.filter(p => p !== null);
+                const wind = daily.wind_speed_10m_max.filter(w => w !== null);
+                
+                climateReport += `7-DAY FORECAST ANALYSIS:
+Avg Maximum: ${maxTemps.length ? (maxTemps.reduce((a,b) => a+b)/maxTemps.length).toFixed(1) : 'N/A'}°C
+Avg Minimum: ${minTemps.length ? (minTemps.reduce((a,b) => a+b)/minTemps.length).toFixed(1) : 'N/A'}°C
+Total Precipitation: ${precip.reduce((a,b) => a+b).toFixed(1)} mm
+Avg Wind Speed: ${wind.length ? (wind.reduce((a,b) => a+b)/wind.length).toFixed(1) : 'N/A'} km/h
+
+Note: Limited to forecast data. Historical data unavailable.`;
+            }
+            
+            climateDiv.textContent = climateReport;
+            
+        } catch (error) {
+            console.error('Climate data fetch error:', error);
+            climateDiv.innerHTML = `<span class="error">Comprehensive climate data unavailable. 
+Error: ${error.message}
+Trying simplified forecast...</span>`;
+            
+            // Fallback to basic forecast
             try {
-                // Use HTTPS and correct parameters
-                const apiUrl = `https://api.open-meteo.com/v1/forecast?` +
-                    `latitude=${p.lat}&longitude=${p.lon}&` +
-                    `daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&` +
-                    `current=temperature_2m,relative_humidity_2m,wind_speed_10m&` +
-                    `timezone=auto&forecast_days=7`;
+                const basicUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&forecast_days=7`;
+                const basicRes = await fetch(basicUrl);
+                const basicData = await basicRes.json();
                 
-                console.log(`Trying point ${p.lat}, ${p.lon}`);
-                
-                const res = await fetch(apiUrl);
-                
-                if (!res.ok) {
-                    console.log(`Failed for point ${p.lat}, ${p.lon}: ${res.status}`);
-                    continue;
-                }
-                
-                const data = await res.json();
-                console.log('API Response:', data);
-                
-                if (!data.daily || !data.current) {
-                    console.log(`No data available for point ${p.lat}, ${p.lon}`);
-                    continue;
-                }
-                
-                const daily = data.daily;
-                const current = data.current;
-                
-                // Collect valid data
-                if (daily.temperature_2m_max && daily.temperature_2m_max[0] !== null) {
-                    tempsMax.push(daily.temperature_2m_max[0]);
-                }
-                if (daily.temperature_2m_min && daily.temperature_2m_min[0] !== null) {
-                    tempsMin.push(daily.temperature_2m_min[0]);
-                }
-                if (daily.precipitation_sum && daily.precipitation_sum[0] !== null) {
-                    precip.push(daily.precipitation_sum[0]);
-                }
-                if (daily.wind_speed_10m_max && daily.wind_speed_10m_max[0] !== null) {
-                    wind.push(daily.wind_speed_10m_max[0]);
-                }
-                
-                successfulRequests++;
-                
-                // If we got data from the first point, show it immediately and continue collecting
-                if (successfulRequests === 1) {
-                    climateDiv.textContent = `Climate Data (${successfulRequests} point${successfulRequests > 1 ? 's' : ''}):
-Current Temperature: ${current.temperature_2m || 'N/A'}°C
-Current Humidity: ${current.relative_humidity_2m || 'N/A'}%
-Current Wind: ${current.wind_speed_10m || 'N/A'} km/h
+                if (basicData.current && basicData.daily) {
+                    const current = basicData.current;
+                    const daily = basicData.daily;
+                    
+                    climateDiv.textContent = `CURRENT CONDITIONS:
+Temperature: ${current.temperature_2m}°C
+Humidity: ${current.relative_humidity_2m}%
+Wind Speed: ${current.wind_speed_10m} km/h
 
-Today's Forecast:
-Max Temperature: ${daily.temperature_2m_max[0] || 'N/A'}°C
-Min Temperature: ${daily.temperature_2m_min[0] || 'N/A'}°C
-Precipitation: ${daily.precipitation_sum[0] || 0} mm
-Wind Speed: ${daily.wind_speed_10m_max[0] || 'N/A'} km/h
+7-DAY FORECAST:
+Max Temp Range: ${Math.min(...daily.temperature_2m_max)} - ${Math.max(...daily.temperature_2m_max)}°C
+Min Temp Range: ${Math.min(...daily.temperature_2m_min)} - ${Math.max(...daily.temperature_2m_min)}°C
+Total Precipitation: ${daily.precipitation_sum.reduce((a,b) => a+b)} mm
 
-Collecting more data...`;
+Note: Comprehensive yearly data unavailable.`;
                 }
-                
-            } catch(e) { 
-                console.error(`Error for point ${p.lat}, ${p.lon}:`, e);
-                continue;
+            } catch (fallbackError) {
+                climateDiv.innerHTML = `<span class="error">All climate APIs unavailable. Please try again later.</span>`;
             }
         }
-        
-        // Calculate and display averages if we got multiple data points
-        if (successfulRequests > 0) {
-            const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : 'N/A';
-            
-            climateDiv.textContent = `Climate Analysis (${successfulRequests} data point${successfulRequests > 1 ? 's' : ''}):
-
-${successfulRequests > 1 ? 'Average ' : ''}Max Temperature: ${avg(tempsMax)}°C
-${successfulRequests > 1 ? 'Average ' : ''}Min Temperature: ${avg(tempsMin)}°C
-${successfulRequests > 1 ? 'Average ' : ''}Precipitation: ${avg(precip)} mm
-${successfulRequests > 1 ? 'Average ' : ''}Wind Speed: ${avg(wind)} km/h
-
-Data points sampled: ${successfulRequests}/${pointsToTry.length}`;
-        } else {
-            climateDiv.innerHTML = `<span class="error">No climate data available for this location.
-Try clicking on a different area or check your internet connection.</span>`;
+    }
+    
+    // Fetch weather for polygon points
+    async function fetchClimatePolygon(latlngs) {
+        if (latlngs.length === 1) {
+            // Single point
+            await fetchComprehensiveClimate(latlngs[0].lat, latlngs[0].lng);
+            return;
         }
+        
+        // Use centroid for polygon climate data
+        const centroidLat = latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length;
+        const centroidLng = latlngs.reduce((sum, p) => sum + p.lng, 0) / latlngs.length;
+        
+        await fetchComprehensiveClimate(centroidLat, centroidLng);
     }
     
     function setupMarker(latlng) {
@@ -206,7 +360,7 @@ Try clicking on a different area or check your internet connection.</span>`;
                 const pos = ev.target.getLatLng();
                 updateCoords(pos);
                 reverseGeocode(pos.lat, pos.lng);
-                fetchClimatePolygon([{lat: pos.lat, lng: pos.lng}]);
+                fetchComprehensiveClimate(pos.lat, pos.lng);
             });
             marker.on('click', removeMarker);
         } else {
@@ -215,7 +369,7 @@ Try clicking on a different area or check your internet connection.</span>`;
         
         updateCoords(latlng);
         reverseGeocode(latlng.lat, latlng.lng);
-        fetchClimatePolygon([{lat: latlng.lat, lng: latlng.lng}]);
+        fetchComprehensiveClimate(latlng.lat, latlng.lng);
     }
     
     map.on('click', e => setupMarker(e.latlng));
