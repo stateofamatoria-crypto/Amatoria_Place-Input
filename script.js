@@ -548,6 +548,6 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
             document.getElementById('plotLocation').value || '—';
 
             updateNewFields();
-});
+
 
 });
