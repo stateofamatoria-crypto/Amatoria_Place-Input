@@ -310,7 +310,7 @@ Wind Speed: ${current.wind_speed_10m || 'N/A'} km/h
             let climateReport = currentWeather;
             
             if (yearlyStats) {
-                const climateClass = classifyClimate(
+                 climateClass = classifyClimate(
                     parseFloat(yearlyStats.avgTemp),
                     parseFloat(yearlyStats.winterTemp),
                     parseFloat(yearlyStats.summerTemp),
@@ -318,7 +318,7 @@ Wind Speed: ${current.wind_speed_10m || 'N/A'} km/h
                     parseFloat(yearlyStats.summerPrecip)
                 );
                 
-                const seasonalDesc = getSeasonalDescription(
+                 seasonalDesc = getSeasonalDescription(
                     parseFloat(yearlyStats.winterTemp),
                     parseFloat(yearlyStats.summerTemp),
                     parseFloat(yearlyStats.totalPrecip)
@@ -373,6 +373,8 @@ Showing available forecast information only.`;
             }
             
             climateDiv.textContent = climateReport;
+            // Show dashboard with real data
+showClimateDashboard(climateData, currentData, yearlyStats, dataSource);
             
         } catch (error) {
             console.error('Climate data fetch error:', error);
@@ -382,13 +384,13 @@ Trying simplified forecast...</span>`;
             
             // Fallback to basic forecast
             try {
-                const basicUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&forecast_days=7`;
-                const basicRes = await fetch(basicUrl);
-                const basicData = await basicRes.json();
+                 basicUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&forecast_days=7`;
+                 basicRes = await fetch(basicUrl);
+                 basicData = await basicRes.json();
                 
                 if (basicData.current && basicData.daily) {
-                    const current = basicData.current;
-                    const daily = basicData.daily;
+                     current = basicData.current;
+                     daily = basicData.daily;
                     
                     climateDiv.textContent = `CURRENT CONDITIONS:
 Temperature: ${current.temperature_2m}°C
@@ -417,8 +419,8 @@ Note: Comprehensive yearly data unavailable.`;
         }
         
         // Use centroid for polygon climate data
-        const centroidLat = latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length;
-        const centroidLng = latlngs.reduce((sum, p) => sum + p.lng, 0) / latlngs.length;
+         centroidLat = latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length;
+         centroidLng = latlngs.reduce((sum, p) => sum + p.lng, 0) / latlngs.length;
         
         await fetchComprehensiveClimate(centroidLat, centroidLng);
     }
@@ -427,7 +429,7 @@ Note: Comprehensive yearly data unavailable.`;
         if (!marker) {
             marker = L.marker(latlng, { draggable: true }).addTo(map);
             marker.on('dragend', ev => {
-                const pos = ev.target.getLatLng();
+                 pos = ev.target.getLatLng();
                 updateCoords(pos);
                 reverseGeocode(pos.lat, pos.lng);
                 fetchComprehensiveClimate(pos.lat, pos.lng);
@@ -443,16 +445,16 @@ Note: Comprehensive yearly data unavailable.`;
     }
 
 function updateNewFields() {
-    const intent = document.getElementById('developmentIntent');
+     intent = document.getElementById('developmentIntent');
     document.getElementById('factsheet-intent').textContent = 
         intent.value ? intent.options[intent.selectedIndex].text : '—';
     
-    const timeline = document.getElementById('timeline');
+     timeline = document.getElementById('timeline');
     document.getElementById('factsheet-timeline').textContent = 
         timeline.value ? timeline.options[timeline.selectedIndex].text : '—';
     
-    const budgetValue = document.getElementById('budget').value;
-    const currency = document.getElementById('currency').value;
+     budgetValue = document.getElementById('budget').value;
+     currency = document.getElementById('currency').value;
     
     let budgetLabels;
     if (currency === 'JPY') {
@@ -479,7 +481,7 @@ function updateNewFields() {
     
     document.getElementById('factsheet-budget').textContent = budgetLabels[budgetValue - 1];
     
-    const focusValue = document.getElementById('focusBalance').value;
+     focusValue = document.getElementById('focusBalance').value;
     let focusText = 'Balanced';
     if (focusValue <= 3) focusText = 'Profit Focus';
     if (focusValue >= 8) focusText = 'Planet Focus';
@@ -496,10 +498,10 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
     
     map.on('click', e => setupMarker(e.latlng));
     
-    const drawnItems = new L.FeatureGroup();
+     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     
-    const drawControl = new L.Control.Draw({
+     drawControl = new L.Control.Draw({
         edit: { featureGroup: drawnItems },
         draw: { 
             marker: false, 
@@ -513,23 +515,23 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
     
     map.on(L.Draw.Event.CREATED, e => {
         drawnItems.clearLayers();
-        const layer = e.layer;
+         layer = e.layer;
         drawnItems.addLayer(layer);
         
-        const geojson = layer.toGeoJSON();
-        const area = turf.area(geojson);
-        const perimeter = turf.length(geojson, { units: 'meters' });
-        const centroid = turf.centroid(geojson);
+         geojson = layer.toGeoJSON();
+         area = turf.area(geojson);
+         perimeter = turf.length(geojson, { units: 'meters' });
+         centroid = turf.centroid(geojson);
         
         document.getElementById('plotArea').value = Math.round(area);
         document.getElementById('previewArea').textContent = Math.round(area) + ' m²';
         document.getElementById('previewPerimeter').textContent = perimeter.toFixed(1) + ' m';
         
-        const lat = centroid.geometry.coordinates[1];
-        const lng = centroid.geometry.coordinates[0];
+         lat = centroid.geometry.coordinates[1];
+         lng = centroid.geometry.coordinates[0];
         
         // Fetch climate for polygon (averaged)
-        const latlngs = layer.getLatLngs()[0];
+         latlngs = layer.getLatLngs()[0];
         setupMarker({ lat, lng });
         fetchClimatePolygon(latlngs);
     });
@@ -540,7 +542,7 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
         document.getElementById('previewType').textContent = 
             document.getElementById('developmentIntent').value || '—';
             
-        const areaVal = document.getElementById('plotArea').value;
+         areaVal = document.getElementById('plotArea').value;
         document.getElementById('previewArea').textContent = 
             areaVal ? areaVal + ' m²' : '—';
             
@@ -548,6 +550,161 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
             document.getElementById('plotLocation').value || '—';
 
             updateNewFields();
+
+        // Add these functions to your script.js file
+
+// Function to show and populate the climate dashboard
+function showClimateDashboard(climateData, currentData, yearlyStats, dataSource) {
+    // Show the dashboard
+    document.getElementById('climate-dashboard').style.display = 'block';
+    
+    // Update current conditions if available
+    if (currentData && currentData.current) {
+        const current = currentData.current;
+        const currentItems = document.querySelectorAll('#climate-dashboard .current-item .value');
+        
+        if (currentItems[0]) currentItems[0].textContent = getWeatherDescription(current.weather_code) || 'N/A';
+        if (currentItems[1]) currentItems[1].textContent = current.temperature_2m ? `${current.temperature_2m}°C` : 'N/A';
+        if (currentItems[2]) currentItems[2].textContent = current.relative_humidity_2m ? `${current.relative_humidity_2m}%` : 'N/A';
+        if (currentItems[3]) currentItems[3].textContent = current.wind_speed_10m ? `${current.wind_speed_10m} km/h` : 'N/A';
+    }
+    
+    // Update climate classification
+    if (yearlyStats) {
+        const climateClass = classifyClimate(
+            parseFloat(yearlyStats.avgTemp),
+            parseFloat(yearlyStats.winterTemp), 
+            parseFloat(yearlyStats.summerTemp),
+            parseFloat(yearlyStats.totalPrecip),
+            parseFloat(yearlyStats.summerPrecip)
+        );
+        
+        const seasonalDesc = getSeasonalDescription(
+            parseFloat(yearlyStats.winterTemp),
+            parseFloat(yearlyStats.summerTemp),
+            parseFloat(yearlyStats.totalPrecip)
+        );
+        
+        const climateTypeEl = document.querySelector('.climate-type');
+        const climateDescEl = document.querySelector('.climate-description');
+        
+        if (climateTypeEl) climateTypeEl.textContent = climateClass;
+        if (climateDescEl) climateDescEl.textContent = seasonalDesc;
+    }
+    
+    const dataSourceEl = document.querySelector('.data-source');
+    if (dataSourceEl) dataSourceEl.textContent = `Data Source: ${dataSource}`;
+    
+    // Update info items with real data
+    if (yearlyStats) {
+        updateInfoItems(yearlyStats);
+        updatePlanningNotes(yearlyStats);
+    }
+    
+    // Update charts with real data
+    updateChartData(yearlyStats);
+}
+
+// Function to update info items
+function updateInfoItems(yearlyStats) {
+    const infoItems = document.querySelectorAll('.info-item .value');
+    
+    if (infoItems[0]) infoItems[0].textContent = `${(parseFloat(yearlyStats.maxTemp) - parseFloat(yearlyStats.minTemp)).toFixed(1)}°C`;
+    if (infoItems[1]) infoItems[1].textContent = `${yearlyStats.hotDays} days`;
+    if (infoItems[2]) infoItems[2].textContent = `${yearlyStats.frostDays} days`;
+    if (infoItems[3]) infoItems[3].textContent = yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short';
+    if (infoItems[4]) infoItems[4].textContent = `${parseInt(yearlyStats.totalPrecip).toLocaleString()} mm`;
+    if (infoItems[5]) infoItems[5].textContent = `${yearlyStats.rainyDays} days`;
+    if (infoItems[6]) infoItems[6].textContent = parseFloat(yearlyStats.avgWindSpeed) > 15 ? 'High' : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 'Moderate' : 'Low';
+    if (infoItems[7]) infoItems[7].textContent = `${yearlyStats.maxWindSpeed} km/h`;
+}
+
+// Function to update planning notes
+function updatePlanningNotes(yearlyStats) {
+    const notesList = document.querySelectorAll('.note-category ul');
+    
+    if (notesList[0]) { // Agricultural suitability
+        const frostFreeDays = Math.max(0, 365 - yearlyStats.frostDays);
+        const growingSeason = yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short';
+        const irrigationNeeds = parseFloat(yearlyStats.totalPrecip) < 400 ? 'High' : parseFloat(yearlyStats.totalPrecip) < 800 ? 'Moderate' : 'Low';
+        const heatStress = yearlyStats.hotDays > 30 ? 'High' : yearlyStats.hotDays > 10 ? 'Moderate' : 'Low';
+        
+        notesList[0].innerHTML = `
+            <li>Growing Season: ${growingSeason} (${frostFreeDays} frost-free days)</li>
+            <li>Irrigation Needs: ${irrigationNeeds}</li>
+            <li>Heat Stress Risk: ${heatStress}</li>
+        `;
+    }
+    
+    if (notesList[1]) { // Urban planning
+        const coolingDemand = yearlyStats.hotDays > 20 ? 'High AC requirements' : 'Moderate cooling needs';
+        const heatingDemand = yearlyStats.frostDays > 100 ? 'Significant heating required' : 'Moderate heating needs';
+        const drainagePlanning = parseFloat(yearlyStats.totalPrecip) > 1000 ? 'Important for high rainfall' : 'Standard drainage sufficient';
+        const greenInfra = parseFloat(yearlyStats.totalPrecip) < 600 ? 'Drought-resistant plants' : 'Various plant options suitable';
+        
+        notesList[1].innerHTML = `
+            <li>Cooling Demand: ${coolingDemand}</li>
+            <li>Heating Demand: ${heatingDemand}</li>
+            <li>Drainage Planning: ${drainagePlanning}</li>
+            <li>Green Infrastructure: ${greenInfra}</li>
+        `;
+    }
+}
+
+// Function to update chart data with real values
+function updateChartData(yearlyStats) {
+    if (!yearlyStats) return;
+    
+    // Update temperature chart if it exists
+    if (window.tempChart) {
+        window.tempChart.data.datasets[0].data = [
+            parseFloat(yearlyStats.avgTemp),
+            parseFloat(yearlyStats.avgMaxTemp), 
+            parseFloat(yearlyStats.avgMinTemp),
+            parseFloat(yearlyStats.winterTemp),
+            parseFloat(yearlyStats.summerTemp)
+        ];
+        window.tempChart.update();
+    }
+    
+    // Update extremes chart
+    if (window.extremesChart) {
+        const normalDays = Math.max(0, 365 - yearlyStats.hotDays - yearlyStats.frostDays);
+        window.extremesChart.data.datasets[0].data = [
+            yearlyStats.hotDays,
+            yearlyStats.frostDays,
+            normalDays
+        ];
+        window.extremesChart.update();
+    }
+    
+    // Update precipitation chart
+    if (window.precipChart) {
+        window.precipChart.data.datasets[0].data = [
+            parseFloat(yearlyStats.winterPrecip),
+            parseFloat(yearlyStats.summerPrecip),
+            parseFloat(yearlyStats.totalPrecip) / 10 // Scale for visibility
+        ];
+        window.precipChart.update();
+    }
+    
+    // Update wind chart
+    if (window.windChart) {
+        const windExposure = parseFloat(yearlyStats.avgWindSpeed) > 15 ? 80 : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 60 : 40;
+        window.windChart.data.datasets[0].data = [
+            parseFloat(yearlyStats.avgWindSpeed),
+            parseFloat(yearlyStats.maxWindSpeed),
+            windExposure
+        ];
+        window.windChart.update();
+    }
+}
+
+// Add this line to your fetchComprehensiveClimate function, right after:
+// climateDiv.textContent = climateReport;
+
+// Add this line:
+// showClimateDashboard(climateData, currentData, yearlyStats, dataSource);
 });
 
 });
