@@ -514,7 +514,7 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
         document.getElementById('previewName').textContent = 
             document.getElementById('plotName').value || '—';
         document.getElementById('previewType').textContent = 
-            document.getElementById('plotType').value || '—';
+            document.getElementById('developmentIntent').value || '—';
             
         const areaVal = document.getElementById('plotArea').value;
         document.getElementById('previewArea').textContent = 
@@ -522,5 +522,8 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
             
         document.getElementById('previewLocation').textContent = 
             document.getElementById('plotLocation').value || '—';
-    });
+
+            updateNewFields();
+});
+
 });
