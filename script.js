@@ -10,9 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '© Google'
     });
     
-   L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
-
-
+    L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
     
     let marker;
     
@@ -545,7 +543,15 @@ Note: Comprehensive yearly data unavailable.`;
         }
     }
     
-   // Fetch weather for polygon points
+    // Fetch weather for polygon points
+    async function fetchClimatePolygon(latlngs) {
+        if (latlngs.length === 1) {
+            // Single point
+            await fetchComprehensiveClimate(latlngs[0].lat, latlngs[0].lng);
+            return;
+        }
+        
+       // Fetch weather for polygon points
     async function fetchClimatePolygon(latlngs) {
         if (latlngs.length === 1) {
             // Single point
