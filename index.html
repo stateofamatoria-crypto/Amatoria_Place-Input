@@ -88,13 +88,22 @@
         <option value="flexible">Flexible</option>
     </select>
     
-    <label for="budget">Budget Range</label>
-    <input type="range" id="budget" min="1" max="5" value="3" style="width: 100%; margin-bottom: 5px;">
-    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
-        <span><$100K</span>
-        <span>$500K</span>
-        <span>$2M+</span>
-    </div>
+   <label for="currency">Currency</label>
+<select id="currency" style="width: 100%; margin-bottom: 10px;">
+    <option value="EUR">EUR (€)</option>
+    <option value="USD">USD ($)</option>
+    <option value="CHF">CHF (₣)</option>
+    <option value="GBP">GBP (£)</option>
+</select>
+
+<label for="budget">Budget Range</label>
+<input type="range" id="budget" min="1" max="6" value="3" style="width: 100%; margin-bottom: 5px;">
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
+    <span>500K</span>
+    <span>2M</span>
+    <span>10M</span>
+    <span>20M+</span>
+</div>
 
     <label for="focusBalance" style="margin-top: 15px; display: block;">Priority Balance</label>
 <input type="range" id="focusBalance" min="1" max="10" value="5" style="width: 100%; margin-bottom: 5px;">
