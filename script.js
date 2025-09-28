@@ -468,7 +468,7 @@ document.getElementById('timeline').addEventListener('change', updateNewFields);
 document.getElementById('budget').addEventListener('input', updateNewFields);
 document.getElementById('focusBalance').addEventListener('input', updateNewFields);
 
-    }
+  
     
     map.on('click', e => setupMarker(e.latlng));
     
