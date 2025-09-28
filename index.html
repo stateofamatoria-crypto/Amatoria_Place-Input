@@ -386,5 +386,12 @@
     
     <!-- Your custom JavaScript (must be last) -->
     <script src="./script.js"></script>
+
+             // Store charts globally for updates
+window.tempChart = new Chart(tempCtx, { /* your existing config */ });
+window.extremesChart = new Chart(extremesCtx, { /* your existing config */ });  
+window.precipChart = new Chart(precipCtx, { /* your existing config */ });
+window.windChart = new Chart(windCtx, { /* your existing config */ });
+             
 </body>
 </html>
