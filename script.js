@@ -441,6 +441,34 @@ Note: Comprehensive yearly data unavailable.`;
         reverseGeocode(latlng.lat, latlng.lng);
         fetchComprehensiveClimate(latlng.lat, latlng.lng);
     }
+
+    function updateNewFields() {
+    const intent = document.getElementById('developmentIntent');
+    document.getElementById('factsheet-intent').textContent = 
+        intent.value ? intent.options[intent.selectedIndex].text : '—';
+    
+    const timeline = document.getElementById('timeline');
+    document.getElementById('factsheet-timeline').textContent = 
+        timeline.value ? timeline.options[timeline.selectedIndex].text : '—';
+    
+    const budgetValue = document.getElementById('budget').value;
+    const budgetLabels = ['<$100K', '$100K-$500K', '$500K-$2M', '$2M+', 'Flexible'];
+    document.getElementById('factsheet-budget').textContent = budgetLabels[budgetValue - 1];
+    
+    const focusValue = document.getElementById('focusBalance').value;
+    let focusText = 'Balanced';
+    if (focusValue <= 3) focusText = 'Economic Focus';
+    if (focusValue >= 8) focusText = 'Ecological Focus';
+    document.getElementById('factsheet-focus').textContent = focusText;
+}
+
+// Add event listeners
+document.getElementById('developmentIntent').addEventListener('change', updateNewFields);
+document.getElementById('timeline').addEventListener('change', updateNewFields);
+document.getElementById('budget').addEventListener('input', updateNewFields);
+document.getElementById('focusBalance').addEventListener('input', updateNewFields);
+
+    }
     
     map.on('click', e => setupMarker(e.latlng));
     
