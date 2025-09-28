@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('previewCoords').textContent = "—";
             document.getElementById('plotLocation').value = "";
             document.getElementById('previewClimateSidebar').textContent = "—";
+            // Hide dashboard when marker is removed
+            document.getElementById('climate-dashboard').style.display = 'none';
         }
     }
     
@@ -163,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             summerPrecip: summerPrecip.length ? (summerPrecip.reduce((a,b) => a+b) * (scaleFactor/4)).toFixed(0) : 'N/A'
         };
     }
+    
     function classifyClimate(avgTemp, winterTemp, summerTemp, annualPrecip, summerPrecip) {
         // Simplified Köppen-Geiger classification
         if (avgTemp < 0) return "Polar climate";
@@ -201,6 +204,153 @@ document.addEventListener('DOMContentLoaded', function() {
         else desc += ". Very high rainfall";
         
         return desc;
+    }
+    
+    // Function to show and populate the climate dashboard
+    function showClimateDashboard(climateData, currentData, yearlyStats, dataSource) {
+        // Show the dashboard
+        document.getElementById('climate-dashboard').style.display = 'block';
+        
+        // Update current conditions if available
+        if (currentData && currentData.current) {
+            const current = currentData.current;
+            const currentItems = document.querySelectorAll('#climate-dashboard .current-item .value');
+            
+            if (currentItems[0]) currentItems[0].textContent = getWeatherDescription(current.weather_code) || 'N/A';
+            if (currentItems[1]) currentItems[1].textContent = current.temperature_2m ? `${current.temperature_2m}°C` : 'N/A';
+            if (currentItems[2]) currentItems[2].textContent = current.relative_humidity_2m ? `${current.relative_humidity_2m}%` : 'N/A';
+            if (currentItems[3]) currentItems[3].textContent = current.wind_speed_10m ? `${current.wind_speed_10m} km/h` : 'N/A';
+        }
+        
+        // Update climate classification
+        if (yearlyStats) {
+            const climateClass = classifyClimate(
+                parseFloat(yearlyStats.avgTemp),
+                parseFloat(yearlyStats.winterTemp), 
+                parseFloat(yearlyStats.summerTemp),
+                parseFloat(yearlyStats.totalPrecip),
+                parseFloat(yearlyStats.summerPrecip)
+            );
+            
+            const seasonalDesc = getSeasonalDescription(
+                parseFloat(yearlyStats.winterTemp),
+                parseFloat(yearlyStats.summerTemp),
+                parseFloat(yearlyStats.totalPrecip)
+            );
+            
+            const climateTypeEl = document.querySelector('.climate-type');
+            const climateDescEl = document.querySelector('.climate-description');
+            
+            if (climateTypeEl) climateTypeEl.textContent = climateClass;
+            if (climateDescEl) climateDescEl.textContent = seasonalDesc;
+        }
+        
+        const dataSourceEl = document.querySelector('.data-source');
+        if (dataSourceEl) dataSourceEl.textContent = `Data Source: ${dataSource}`;
+        
+        // Update info items and planning notes with real data
+        if (yearlyStats) {
+            updateInfoItems(yearlyStats);
+            updatePlanningNotes(yearlyStats);
+        }
+        
+        // Update charts with real data
+        updateChartData(yearlyStats);
+    }
+    
+    // Function to update info items
+    function updateInfoItems(yearlyStats) {
+        const infoItems = document.querySelectorAll('.info-item .value');
+        
+        if (infoItems[0]) infoItems[0].textContent = `${(parseFloat(yearlyStats.maxTemp) - parseFloat(yearlyStats.minTemp)).toFixed(1)}°C`;
+        if (infoItems[1]) infoItems[1].textContent = `${yearlyStats.hotDays} days`;
+        if (infoItems[2]) infoItems[2].textContent = `${yearlyStats.frostDays} days`;
+        if (infoItems[3]) infoItems[3].textContent = yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short';
+        if (infoItems[4]) infoItems[4].textContent = `${parseInt(yearlyStats.totalPrecip).toLocaleString()} mm`;
+        if (infoItems[5]) infoItems[5].textContent = `${yearlyStats.rainyDays} days`;
+        if (infoItems[6]) infoItems[6].textContent = parseFloat(yearlyStats.avgWindSpeed) > 15 ? 'High' : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 'Moderate' : 'Low';
+        if (infoItems[7]) infoItems[7].textContent = `${yearlyStats.maxWindSpeed} km/h`;
+    }
+    
+    // Function to update planning notes
+    function updatePlanningNotes(yearlyStats) {
+        const notesList = document.querySelectorAll('.note-category ul');
+        
+        if (notesList[0]) { // Agricultural suitability
+            const frostFreeDays = Math.max(0, 365 - yearlyStats.frostDays);
+            const growingSeason = yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short';
+            const irrigationNeeds = parseFloat(yearlyStats.totalPrecip) < 400 ? 'High' : parseFloat(yearlyStats.totalPrecip) < 800 ? 'Moderate' : 'Low';
+            const heatStress = yearlyStats.hotDays > 30 ? 'High' : yearlyStats.hotDays > 10 ? 'Moderate' : 'Low';
+            
+            notesList[0].innerHTML = `
+                <li>Growing Season: ${growingSeason} (${frostFreeDays} frost-free days)</li>
+                <li>Irrigation Needs: ${irrigationNeeds}</li>
+                <li>Heat Stress Risk: ${heatStress}</li>
+            `;
+        }
+        
+        if (notesList[1]) { // Urban planning
+            const coolingDemand = yearlyStats.hotDays > 20 ? 'High AC requirements' : 'Moderate cooling needs';
+            const heatingDemand = yearlyStats.frostDays > 100 ? 'Significant heating required' : 'Moderate heating needs';
+            const drainagePlanning = parseFloat(yearlyStats.totalPrecip) > 1000 ? 'Important for high rainfall' : 'Standard drainage sufficient';
+            const greenInfra = parseFloat(yearlyStats.totalPrecip) < 600 ? 'Drought-resistant plants' : 'Various plant options suitable';
+            
+            notesList[1].innerHTML = `
+                <li>Cooling Demand: ${coolingDemand}</li>
+                <li>Heating Demand: ${heatingDemand}</li>
+                <li>Drainage Planning: ${drainagePlanning}</li>
+                <li>Green Infrastructure: ${greenInfra}</li>
+            `;
+        }
+    }
+    
+    // Function to update chart data with real values
+    function updateChartData(yearlyStats) {
+        if (!yearlyStats) return;
+        
+        // Update temperature chart if it exists
+        if (window.tempChart) {
+            window.tempChart.data.datasets[0].data = [
+                parseFloat(yearlyStats.avgTemp),
+                parseFloat(yearlyStats.avgMaxTemp), 
+                parseFloat(yearlyStats.avgMinTemp),
+                parseFloat(yearlyStats.winterTemp),
+                parseFloat(yearlyStats.summerTemp)
+            ];
+            window.tempChart.update();
+        }
+        
+        // Update extremes chart
+        if (window.extremesChart) {
+            const normalDays = Math.max(0, 365 - yearlyStats.hotDays - yearlyStats.frostDays);
+            window.extremesChart.data.datasets[0].data = [
+                yearlyStats.hotDays,
+                yearlyStats.frostDays,
+                normalDays
+            ];
+            window.extremesChart.update();
+        }
+        
+        // Update precipitation chart
+        if (window.precipChart) {
+            window.precipChart.data.datasets[0].data = [
+                parseFloat(yearlyStats.winterPrecip),
+                parseFloat(yearlyStats.summerPrecip),
+                parseFloat(yearlyStats.totalPrecip) / 10 // Scale for visibility
+            ];
+            window.precipChart.update();
+        }
+        
+        // Update wind chart
+        if (window.windChart) {
+            const windExposure = parseFloat(yearlyStats.avgWindSpeed) > 15 ? 80 : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 60 : 40;
+            window.windChart.data.datasets[0].data = [
+                parseFloat(yearlyStats.avgWindSpeed),
+                parseFloat(yearlyStats.maxWindSpeed),
+                windExposure
+            ];
+            window.windChart.update();
+        }
     }
     
     // Comprehensive climate data fetching
@@ -362,10 +512,10 @@ Irrigation Needs: ${parseFloat(yearlyStats.totalPrecip) < 400 ? 'High' : parseFl
 Heat Stress Risk: ${yearlyStats.hotDays > 30 ? 'High' : yearlyStats.hotDays > 10 ? 'Moderate' : 'Low'}
 
 URBAN PLANNING NOTES:
-• Cooling Demand: ${yearlyStats.hotDays > 20 ? 'High AC requirements' : 'Moderate cooling needs'}
-• Heating Demand: ${yearlyStats.frostDays > 100 ? 'Significant heating required' : 'Moderate heating needs'}
-• Drainage Planning: ${parseFloat(yearlyStats.totalPrecip) > 1000 ? 'Important for high rainfall' : 'Standard drainage sufficient'}
-• Green Infrastructure: ${parseFloat(yearlyStats.totalPrecip) < 600 ? 'Drought-resistant plants' : 'Various plant options suitable'}`;
+- Cooling Demand: ${yearlyStats.hotDays > 20 ? 'High AC requirements' : 'Moderate cooling needs'}
+- Heating Demand: ${yearlyStats.frostDays > 100 ? 'Significant heating required' : 'Moderate heating needs'}
+- Drainage Planning: ${parseFloat(yearlyStats.totalPrecip) > 1000 ? 'Important for high rainfall' : 'Standard drainage sufficient'}
+- Green Infrastructure: ${parseFloat(yearlyStats.totalPrecip) < 600 ? 'Drought-resistant plants' : 'Various plant options suitable'}`;
             } else {
                 climateReport += `LIMITED FORECAST DATA AVAILABLE
 Unable to access comprehensive climate databases.
@@ -373,6 +523,9 @@ Showing available forecast information only.`;
             }
             
             climateDiv.textContent = climateReport;
+            
+            // Show dashboard with real data
+            showClimateDashboard(climateData, currentData, yearlyStats, dataSource);
             
         } catch (error) {
             console.error('Climate data fetch error:', error);
@@ -408,6 +561,7 @@ Note: Comprehensive yearly data unavailable.`;
         }
     }
     
+   
     // Fetch weather for polygon points
     async function fetchClimatePolygon(latlngs) {
         if (latlngs.length === 1) {
