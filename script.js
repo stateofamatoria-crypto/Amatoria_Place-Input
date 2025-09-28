@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
     
-   const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    subdomains: ['mt0','mt1','mt2','mt3'],
-    attribution: '© Google'
-});
+    const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0','mt1','mt2','mt3'],
+        attribution: '© Google'
+    });
     
     L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
     
@@ -561,9 +561,8 @@ Note: Comprehensive yearly data unavailable.`;
         }
     }
     
-   
     // Fetch weather for polygon points
-    async function fetchClimatePolygon(latlngs) {
+   async function fetchClimatePolygon(latlngs) {
         if (latlngs.length === 1) {
             // Single point
             await fetchComprehensiveClimate(latlngs[0].lat, latlngs[0].lng);
@@ -596,58 +595,57 @@ Note: Comprehensive yearly data unavailable.`;
         fetchComprehensiveClimate(latlng.lat, latlng.lng);
     }
 
-function updateNewFields() {
-    const intent = document.getElementById('developmentIntent');
-    document.getElementById('factsheet-intent').textContent = 
-        intent.value ? intent.options[intent.selectedIndex].text : '—';
-    
-    const timeline = document.getElementById('timeline');
-    document.getElementById('factsheet-timeline').textContent = 
-        timeline.value ? timeline.options[timeline.selectedIndex].text : '—';
-    
-    const budgetValue = document.getElementById('budget').value;
-    const currency = document.getElementById('currency').value;
-    
-    let budgetLabels;
-    if (currency === 'JPY') {
-        // Japanese Yen - much higher numbers
-        budgetLabels = [
-            `<50M ${currency}`, 
-            `50M-200M ${currency}`, 
-            `200M-500M ${currency}`, 
-            `500M-1B ${currency}`, 
-            `1B-2B ${currency}`, 
-            `2B+ ${currency}`
-        ];
-    } else {
-        // EUR, USD, CHF, GBP, CNY - similar scales
-        budgetLabels = [
-            `<500K ${currency}`, 
-            `500K-2M ${currency}`, 
-            `2M-5M ${currency}`, 
-            `5M-10M ${currency}`, 
-            `10M-20M ${currency}`, 
-            `20M+ ${currency}`
-        ];
+    function updateNewFields() {
+        const intent = document.getElementById('developmentIntent');
+        document.getElementById('factsheet-intent').textContent = 
+            intent.value ? intent.options[intent.selectedIndex].text : '—';
+        
+        const timeline = document.getElementById('timeline');
+        document.getElementById('factsheet-timeline').textContent = 
+            timeline.value ? timeline.options[timeline.selectedIndex].text : '—';
+        
+        const budgetValue = document.getElementById('budget').value;
+        const currency = document.getElementById('currency').value;
+        
+        let budgetLabels;
+        if (currency === 'JPY') {
+            // Japanese Yen - much higher numbers
+            budgetLabels = [
+                `<50M ${currency}`, 
+                `50M-200M ${currency}`, 
+                `200M-500M ${currency}`, 
+                `500M-1B ${currency}`, 
+                `1B-2B ${currency}`, 
+                `2B+ ${currency}`
+            ];
+        } else {
+            // EUR, USD, CHF, GBP, CNY - similar scales
+            budgetLabels = [
+                `<500K ${currency}`, 
+                `500K-2M ${currency}`, 
+                `2M-5M ${currency}`, 
+                `5M-10M ${currency}`, 
+                `10M-20M ${currency}`, 
+                `20M+ ${currency}`
+            ];
+        }
+        
+        document.getElementById('factsheet-budget').textContent = budgetLabels[budgetValue - 1];
+        
+        const focusValue = document.getElementById('focusBalance').value;
+        let focusText = 'Balanced';
+        if (focusValue <= 3) focusText = 'Profit Focus';
+        if (focusValue >= 8) focusText = 'Planet Focus';
+        document.getElementById('factsheet-focus').textContent = focusText;
     }
-    
-    document.getElementById('factsheet-budget').textContent = budgetLabels[budgetValue - 1];
-    
-    const focusValue = document.getElementById('focusBalance').value;
-    let focusText = 'Balanced';
-    if (focusValue <= 3) focusText = 'Profit Focus';
-    if (focusValue >= 8) focusText = 'Planet Focus';
-    document.getElementById('factsheet-focus').textContent = focusText;
-}
 
-// Add event listeners
-document.getElementById('developmentIntent').addEventListener('change', updateNewFields);
-document.getElementById('timeline').addEventListener('change', updateNewFields);
-document.getElementById('budget').addEventListener('input', updateNewFields);
-document.getElementById('focusBalance').addEventListener('input', updateNewFields);
+    // Add event listeners
+    document.getElementById('developmentIntent').addEventListener('change', updateNewFields);
+    document.getElementById('timeline').addEventListener('change', updateNewFields);
+    document.getElementById('budget').addEventListener('input', updateNewFields);
+    document.getElementById('currency').addEventListener('change', updateNewFields);
+    document.getElementById('focusBalance').addEventListener('input', updateNewFields);
 
-  
-    
     map.on('click', e => setupMarker(e.latlng));
     
     const drawnItems = new L.FeatureGroup();
@@ -701,7 +699,6 @@ document.getElementById('focusBalance').addEventListener('input', updateNewField
         document.getElementById('previewLocation').textContent = 
             document.getElementById('plotLocation').value || '—';
 
-            updateNewFields();
-
-
+        updateNewFields();
+    });
 });
