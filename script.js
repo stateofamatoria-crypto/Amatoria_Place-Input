@@ -5,13 +5,10 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
     
-    const satellite = L.tileLayer(
-  'https://mt{s}.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
-  {
-    subdomains: ['0','1','2','3'],
+   const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    subdomains: ['mt0','mt1','mt2','mt3'],
     attribution: '© Google'
-  }
-);
+});
     
     L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
     
