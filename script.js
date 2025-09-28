@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('previewCoords').textContent = "—";
             document.getElementById('plotLocation').value = "";
             document.getElementById('previewClimateSidebar').textContent = "—";
-            // Hide dashboard when marker is removed
             document.getElementById('climate-dashboard').style.display = 'none';
         }
     }
@@ -208,21 +207,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to show and populate the climate dashboard
     function showClimateDashboard(climateData, currentData, yearlyStats, dataSource) {
-        // Show the dashboard
         document.getElementById('climate-dashboard').style.display = 'block';
         
-        // Update current conditions if available
         if (currentData && currentData.current) {
             const current = currentData.current;
             const currentItems = document.querySelectorAll('#climate-dashboard .current-item .value');
-            
             if (currentItems[0]) currentItems[0].textContent = getWeatherDescription(current.weather_code) || 'N/A';
             if (currentItems[1]) currentItems[1].textContent = current.temperature_2m ? `${current.temperature_2m}°C` : 'N/A';
             if (currentItems[2]) currentItems[2].textContent = current.relative_humidity_2m ? `${current.relative_humidity_2m}%` : 'N/A';
             if (currentItems[3]) currentItems[3].textContent = current.wind_speed_10m ? `${current.wind_speed_10m} km/h` : 'N/A';
         }
         
-        // Update climate classification
         if (yearlyStats) {
             const climateClass = classifyClimate(
                 parseFloat(yearlyStats.avgTemp),
@@ -240,28 +235,21 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const climateTypeEl = document.querySelector('.climate-type');
             const climateDescEl = document.querySelector('.climate-description');
-            
             if (climateTypeEl) climateTypeEl.textContent = climateClass;
             if (climateDescEl) climateDescEl.textContent = seasonalDesc;
+            
+            updateInfoItems(yearlyStats);
+            updatePlanningNotes(yearlyStats);
         }
         
         const dataSourceEl = document.querySelector('.data-source');
         if (dataSourceEl) dataSourceEl.textContent = `Data Source: ${dataSource}`;
         
-        // Update info items and planning notes with real data
-        if (yearlyStats) {
-            updateInfoItems(yearlyStats);
-            updatePlanningNotes(yearlyStats);
-        }
-        
-        // Update charts with real data
         updateChartData(yearlyStats);
     }
     
-    // Function to update info items
     function updateInfoItems(yearlyStats) {
         const infoItems = document.querySelectorAll('.info-item .value');
-        
         if (infoItems[0]) infoItems[0].textContent = `${(parseFloat(yearlyStats.maxTemp) - parseFloat(yearlyStats.minTemp)).toFixed(1)}°C`;
         if (infoItems[1]) infoItems[1].textContent = `${yearlyStats.hotDays} days`;
         if (infoItems[2]) infoItems[2].textContent = `${yearlyStats.frostDays} days`;
@@ -272,11 +260,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (infoItems[7]) infoItems[7].textContent = `${yearlyStats.maxWindSpeed} km/h`;
     }
     
-    // Function to update planning notes
     function updatePlanningNotes(yearlyStats) {
         const notesList = document.querySelectorAll('.note-category ul');
         
-        if (notesList[0]) { // Agricultural suitability
+        if (notesList[0]) {
             const frostFreeDays = Math.max(0, 365 - yearlyStats.frostDays);
             const growingSeason = yearlyStats.frostDays < 100 ? 'Long' : yearlyStats.frostDays < 200 ? 'Moderate' : 'Short';
             const irrigationNeeds = parseFloat(yearlyStats.totalPrecip) < 400 ? 'High' : parseFloat(yearlyStats.totalPrecip) < 800 ? 'Moderate' : 'Low';
@@ -289,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
-        if (notesList[1]) { // Urban planning
+        if (notesList[1]) {
             const coolingDemand = yearlyStats.hotDays > 20 ? 'High AC requirements' : 'Moderate cooling needs';
             const heatingDemand = yearlyStats.frostDays > 100 ? 'Significant heating required' : 'Moderate heating needs';
             const drainagePlanning = parseFloat(yearlyStats.totalPrecip) > 1000 ? 'Important for high rainfall' : 'Standard drainage sufficient';
@@ -304,11 +291,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Function to update chart data with real values
     function updateChartData(yearlyStats) {
         if (!yearlyStats) return;
         
-        // Update temperature chart if it exists
         if (window.tempChart) {
             window.tempChart.data.datasets[0].data = [
                 parseFloat(yearlyStats.avgTemp),
@@ -320,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function() {
             window.tempChart.update();
         }
         
-        // Update extremes chart
         if (window.extremesChart) {
             const normalDays = Math.max(0, 365 - yearlyStats.hotDays - yearlyStats.frostDays);
             window.extremesChart.data.datasets[0].data = [
@@ -331,17 +315,15 @@ document.addEventListener('DOMContentLoaded', function() {
             window.extremesChart.update();
         }
         
-        // Update precipitation chart
         if (window.precipChart) {
             window.precipChart.data.datasets[0].data = [
                 parseFloat(yearlyStats.winterPrecip),
                 parseFloat(yearlyStats.summerPrecip),
-                parseFloat(yearlyStats.totalPrecip) / 10 // Scale for visibility
+                parseFloat(yearlyStats.totalPrecip) / 10
             ];
             window.precipChart.update();
         }
         
-        // Update wind chart
         if (window.windChart) {
             const windExposure = parseFloat(yearlyStats.avgWindSpeed) > 15 ? 80 : parseFloat(yearlyStats.avgWindSpeed) > 10 ? 60 : 40;
             window.windChart.data.datasets[0].data = [
@@ -353,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Comprehensive climate data fetching
+    // Comprehensive climate data fetching - YOUR ORIGINAL FULL VERSION
     async function fetchComprehensiveClimate(lat, lng) {
         const climateDiv = document.getElementById('previewClimateSidebar');
         climateDiv.innerHTML = '<span class="loading">Loading comprehensive climate data...</span>';
@@ -561,8 +543,8 @@ Note: Comprehensive yearly data unavailable.`;
         }
     }
     
-    // Fetch weather for polygon points
-   async function fetchClimatePolygon(latlngs) {
+   // Fetch weather for polygon points
+    async function fetchClimatePolygon(latlngs) {
         if (latlngs.length === 1) {
             // Single point
             await fetchComprehensiveClimate(latlngs[0].lat, latlngs[0].lng);
@@ -609,7 +591,6 @@ Note: Comprehensive yearly data unavailable.`;
         
         let budgetLabels;
         if (currency === 'JPY') {
-            // Japanese Yen - much higher numbers
             budgetLabels = [
                 `<50M ${currency}`, 
                 `50M-200M ${currency}`, 
@@ -619,7 +600,6 @@ Note: Comprehensive yearly data unavailable.`;
                 `2B+ ${currency}`
             ];
         } else {
-            // EUR, USD, CHF, GBP, CNY - similar scales
             budgetLabels = [
                 `<500K ${currency}`, 
                 `500K-2M ${currency}`, 
@@ -645,7 +625,7 @@ Note: Comprehensive yearly data unavailable.`;
     document.getElementById('budget').addEventListener('input', updateNewFields);
     document.getElementById('currency').addEventListener('change', updateNewFields);
     document.getElementById('focusBalance').addEventListener('input', updateNewFields);
-
+    
     map.on('click', e => setupMarker(e.latlng));
     
     const drawnItems = new L.FeatureGroup();
@@ -689,8 +669,10 @@ Note: Comprehensive yearly data unavailable.`;
     document.getElementById('savePlot').addEventListener('click', () => {
         document.getElementById('previewName').textContent = 
             document.getElementById('plotName').value || '—';
+        
+        const intent = document.getElementById('developmentIntent');
         document.getElementById('previewType').textContent = 
-            document.getElementById('developmentIntent').value || '—';
+            intent.value ? intent.options[intent.selectedIndex].text : '—';
             
         const areaVal = document.getElementById('plotArea').value;
         document.getElementById('previewArea').textContent = 
