@@ -442,7 +442,7 @@ Note: Comprehensive yearly data unavailable.`;
         fetchComprehensiveClimate(latlng.lat, latlng.lng);
     }
 
-    function updateNewFields() {
+function updateNewFields() {
     const intent = document.getElementById('developmentIntent');
     document.getElementById('factsheet-intent').textContent = 
         intent.value ? intent.options[intent.selectedIndex].text : '—';
@@ -452,13 +452,37 @@ Note: Comprehensive yearly data unavailable.`;
         timeline.value ? timeline.options[timeline.selectedIndex].text : '—';
     
     const budgetValue = document.getElementById('budget').value;
-    const budgetLabels = ['<$100K', '$100K-$500K', '$500K-$2M', '$2M+', 'Flexible'];
+    const currency = document.getElementById('currency').value;
+    
+    let budgetLabels;
+    if (currency === 'JPY') {
+        // Japanese Yen - much higher numbers
+        budgetLabels = [
+            `<50M ${currency}`, 
+            `50M-200M ${currency}`, 
+            `200M-500M ${currency}`, 
+            `500M-1B ${currency}`, 
+            `1B-2B ${currency}`, 
+            `2B+ ${currency}`
+        ];
+    } else {
+        // EUR, USD, CHF, GBP, CNY - similar scales
+        budgetLabels = [
+            `<500K ${currency}`, 
+            `500K-2M ${currency}`, 
+            `2M-5M ${currency}`, 
+            `5M-10M ${currency}`, 
+            `10M-20M ${currency}`, 
+            `20M+ ${currency}`
+        ];
+    }
+    
     document.getElementById('factsheet-budget').textContent = budgetLabels[budgetValue - 1];
     
     const focusValue = document.getElementById('focusBalance').value;
     let focusText = 'Balanced';
-    if (focusValue <= 3) focusText = 'Economic Focus';
-    if (focusValue >= 8) focusText = 'Ecological Focus';
+    if (focusValue <= 3) focusText = 'Profit Focus';
+    if (focusValue >= 8) focusText = 'Planet Focus';
     document.getElementById('factsheet-focus').textContent = focusText;
 }
 
