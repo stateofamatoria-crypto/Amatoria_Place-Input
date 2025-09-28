@@ -10,7 +10,18 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '© Google'
     });
     
-    L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
+   L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
+
+// Add geocoder control with custom behavior
+L.Control.geocoder({
+    defaultMarkGeocode: false,
+    position: 'topleft',
+    placeholder: 'Search for places...',
+    errorMessage: 'Location not found'
+}).on('markgeocode', function(e) {
+    const latlng = e.geocode.center;
+    map.setView(latlng, 15);
+}).addTo(map);
     
     let marker;
     
