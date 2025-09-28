@@ -44,7 +44,7 @@
     </div>
     <div id="app">
         <div id="sidebar">
-            <h2>Plot Details</h2>
+            <h2>Site Basics</h2>
             
             <label for="plotName">Plot Name</label>
             <input type="text" id="plotName" placeholder="Enter plot name">
@@ -55,25 +55,47 @@
             <label for="plotArea">Area (m²)</label>
             <input type="number" id="plotArea" placeholder="Draw polygon or enter manually">
             
-            <label for="plotType">Type</label>
-            <select id="plotType">
-                <option value="">Select type...</option>
-                <option>Residential plot</option>
-                <option>Community garden</option>
-                <option>Rooftop garden / rooftop farm</option>
-                <option>Small farm (under 2 hectares)</option>
-                <option>Medium farm (2–20 hectares)</option>
-                <option>Mixed-use plot (residential + commercial)</option>
-                <option>Cultural site (museum, heritage building, art space)</option>
-                <option>Urban green space (parklet, plaza, micro-park)</option>
-                <option>Forest plot / rewilding area</option>
-                <option>Wetland / water feature plot</option>
-                <option>Agricultural experimental site</option>
-                <option>Educational site (school garden, training farm)</option>
-                <option>Commercial agriculture (greenhouse, hydroponics)</option>
-                <option>Industrial plot (with green retrofit)</option>
-                <option>Brownfield (for regeneration planning)</option>
-            </select>
+<div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+    <h4 style="margin-bottom: 15px; color: #333;">Development Vision</h4>
+    
+    <label for="developmentIntent">Development Intent</label>
+    <select id="developmentIntent" style="width: 100%; margin-bottom: 10px;">
+        <option value="">Select primary intent...</option>
+        <option value="residential">Residential Development</option>
+        <option value="commercial">Commercial Development</option>
+        <option value="agricultural">Agricultural Use</option>
+        <option value="mixed-use">Mixed-use Development</option>
+        <option value="conservation">Conservation/Restoration</option>
+        <option value="cultural">Cultural/Heritage Site</option>
+        <option value="recreational">Recreational Space</option>
+    </select>
+    
+    <label for="timeline">Project Timeline</label>
+    <select id="timeline" style="width: 100%; margin-bottom: 10px;">
+        <option value="">Select timeline...</option>
+        <option value="6months">6 months</option>
+        <option value="1year">1 year</option>
+        <option value="2-3years">2-3 years</option>
+        <option value="5+years">5+ years</option>
+        <option value="flexible">Flexible</option>
+    </select>
+    
+    <label for="budget">Budget Range</label>
+    <input type="range" id="budget" min="1" max="5" value="3" style="width: 100%; margin-bottom: 5px;">
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
+        <span><$100K</span>
+        <span>$500K</span>
+        <span>$2M+</span>
+    </div>
+    
+    <label for="focusBalance" style="margin-top: 15px; display: block;">Priority Balance</label>
+    <input type="range" id="focusBalance" min="1" max="10" value="5" style="width: 100%; margin-bottom: 5px;">
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666;">
+        <span>Economic</span>
+        <span>Balanced</span>
+        <span>Ecological</span>
+    </div>
+</div>
             
             <button id="savePlot">Save Plot</button>
             
@@ -85,7 +107,12 @@
                 <p><strong>Perimeter:</strong> <span id="previewPerimeter">—</span> m</p>
                 <p><strong>Type:</strong> <span id="previewType">—</span></p>
                 <p><strong>Coordinates:</strong> <span id="previewCoords">—</span></p>
+                <p><strong>Intent:</strong> <span id="factsheet-intent">—</span></p>
+<p><strong>Timeline:</strong> <span id="factsheet-timeline">—</span></p>
+<p><strong>Budget:</strong> <span id="factsheet-budget">—</span></p>
+<p><strong>Focus:</strong> <span id="factsheet-focus">—</span></p>
                 <button id="removePin">Remove Pin</button>
+                
                 
                 <h3>Climate Data</h3>
                 <pre id="previewClimateSidebar">—</pre>
