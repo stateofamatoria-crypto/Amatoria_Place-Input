@@ -114,3 +114,153 @@ html, body {
   color: #023ad9;
   margin-bottom: 10px;
 }
+
+/* Climate Dashboard Styles */
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #023ad9;
+}
+
+.chart-container h3 {
+    color: #023ad9;
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.current-conditions {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #023ad9, #0851f5);
+    color: white;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.current-conditions h3 {
+    color: white;
+    margin-bottom: 20px;
+}
+
+.current-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.current-item {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.current-item .label {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+
+.current-item .value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.climate-classification {
+    grid-column: 1 / -1;
+    text-align: center;
+    background: #f1f8ff;
+    border: 2px solid #023ad9;
+}
+
+.climate-type {
+    font-size: 24px;
+    font-weight: bold;
+    color: #023ad9;
+    margin-bottom: 10px;
+}
+
+.climate-description {
+    font-size: 16px;
+    color: #666;
+    font-style: italic;
+}
+
+.data-source {
+    font-size: 12px;
+    color: #888;
+    margin-top: 10px;
+}
+
+canvas {
+    max-height: 300px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.info-item {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    border-left: 3px solid #023ad9;
+}
+
+.info-item .label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 3px;
+}
+
+.info-item .value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #023ad9;
+}
+
+.planning-notes {
+    grid-column: 1 / -1;
+}
+
+.notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.note-category {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-top: 4px solid #023ad9;
+}
+
+.note-category h4 {
+    color: #023ad9;
+    margin: 0 0 10px 0;
+    font-size: 16px;
+}
+
+.note-category ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.note-category li {
+    margin-bottom: 5px;
+    color: #555;
+}
