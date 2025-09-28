@@ -264,3 +264,33 @@ canvas {
     margin-bottom: 5px;
     color: #555;
 }
+
+/* Extend sidebar to full height */
+#sidebar {
+    height: 100vh;
+    overflow-y: auto;
+}
+
+/* Align climate dashboard with map width */
+#climate-dashboard {
+    display: none;
+    margin-top: 20px;
+    margin-left: 300px; /* Same as sidebar width */
+    margin-right: 0;
+    max-width: calc(100vw - 300px); /* Full width minus sidebar */
+}
+
+/* Adjust main app container */
+#app {
+    display: flex;
+    height: 100vh;
+    position: relative;
+}
+
+/* Make sure the dashboard sits below the map properly */
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 0 20px; /* Add some padding to match map spacing */
+}
