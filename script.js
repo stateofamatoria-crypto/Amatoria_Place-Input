@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     L.control.layers({ "OSM": osm, "Satellite": satellite }).addTo(map);
+
+    // Add geocoder control with custom behavior
+L.Control.geocoder({
+    defaultMarkGeocode: false,
+    position: 'topleft',
+    placeholder: 'Search for places...',
+    errorMessage: 'Location not found'
+}).on('markgeocode', function(e) {
+    const latlng = e.geocode.center;
+    map.setView(latlng, 15);
+}).addTo(map);
     
     let marker;
     
@@ -543,14 +554,7 @@ Note: Comprehensive yearly data unavailable.`;
         }
     }
     
-    // Fetch weather for polygon points
-    async function fetchClimatePolygon(latlngs) {
-        if (latlngs.length === 1) {
-            // Single point
-            await fetchComprehensiveClimate(latlngs[0].lat, latlngs[0].lng);
-            return;
-        }
-        
+         
        // Fetch weather for polygon points
     async function fetchClimatePolygon(latlngs) {
         if (latlngs.length === 1) {
