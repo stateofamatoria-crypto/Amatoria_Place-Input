@@ -695,5 +695,4 @@ Note: Comprehensive yearly data unavailable.`;
 
         updateNewFields();
     });
-    });
 
