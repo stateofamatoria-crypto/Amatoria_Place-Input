@@ -395,7 +395,34 @@
                 }
             });
         });
+
+        <!-- Vegetation & Ecoguilds Analysis -->
+<div id="vegetation-section" style="display: none; margin-top: 20px; margin-left: 300px; max-width: calc(100vw - 300px);">
+    <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #023ad9;">
+        <h2 style="color: #023ad9; margin-top: 0;">Vegetation & Ecoguilds Analysis</h2>
+        
+        <div id="veg-summary" style="margin-bottom: 20px; padding: 15px; background: #f1f8ff; border-radius: 8px;">
+            <p>Analyzing local vegetation patterns...</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Species List -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                <h3 style="color: #023ad9; margin-top: 0;">Local Vegetation (Plants)</h3>
+                <div id="veg-species-list">No area selected yet.</div>
+            </div>
+            
+            <!-- Ecoguild Suggestions -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                <h3 style="color: #023ad9; margin-top: 0;">AI Ecoguild Suggestions</h3>
+                <div id="veg-guild-list">No area selected yet.</div>
+            </div>
+        </div>
+    </div>
+</div>
+        
     </script>
+    
     
     <!-- Your custom JavaScript (must be last) -->
     <script src="./script.js"></script>
